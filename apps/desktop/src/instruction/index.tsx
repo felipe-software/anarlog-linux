@@ -1,5 +1,7 @@
 import { Icon } from "@iconify-icon/react";
 import { Trans, useLingui } from "@lingui/react/macro";
+import { useMutation } from "@tanstack/react-query";
+import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
 
@@ -7,6 +9,8 @@ import { commands as openerCommands } from "@anlg/plugin-opener2";
 import {
   ArrowSquareOut,
   CaretLeft,
+  Check,
+  Copy,
   GithubLogo,
 } from "@anlg/ui/components/icons";
 import { OutlookIcon } from "@anlg/ui/components/icons/outlook";
@@ -21,6 +25,9 @@ import { useLatestRef } from "~/shared/hooks/useLatestRef";
 import { usesWindowsStyleTitleBar } from "~/shared/hooks/useWindowControlsGutter";
 
 export type InstructionType = "sign-in" | "billing" | "integration";
+
+const ACTION_BUTTON_CLASS =
+  "bg-card text-muted-foreground hover:bg-background border-border h-10 w-full";
 
 function useInstructionCleanup(onCleanup?: () => void) {
   const cleanupRef = useLatestRef(onCleanup);
@@ -141,9 +148,7 @@ function ExternalInstruction({
         url ? (
           <Button
             variant="outline"
-            className={cn([
-              "bg-card text-muted-foreground hover:bg-background border-border h-10 w-full",
-            ])}
+            className={cn([ACTION_BUTTON_CLASS])}
             onClick={() => void openerCommands.openUrl(url, null)}
           >
             {actionLabel}
@@ -174,7 +179,7 @@ export function InstructionScreen({
   useInstructionCleanup(onCleanup);
 
   if (type === "sign-in") {
-    return <SignInInstruction onBack={onBack} onClose={onClose} />;
+    return <SignInInstruction onBack={onBack} onClose={onClose} url={url} />;
   }
 
   if (type === "billing") {
@@ -244,14 +249,24 @@ function getIntegrationInstruction(integrationId?: string):
 function SignInInstruction({
   onBack,
   onClose,
+  url,
 }: {
   onBack: () => void;
   onClose: () => void;
+  url?: string;
 }) {
   const { t } = useLingui();
   const auth = useAuth();
   const [callbackUrl, setCallbackUrl] = useState("");
   const [showCallbackInput, setShowCallbackInput] = useState(false);
+  const reopen = useMutation({
+    mutationFn: async (signInUrl: string) => {
+      await openerCommands.openUrl(signInUrl, null);
+    },
+  });
+  const copy = useMutation({
+    mutationFn: (signInUrl: string) => writeText(signInUrl),
+  });
 
   useEffect(() => {
     if (!auth?.session) {
@@ -267,6 +282,38 @@ function SignInInstruction({
       description={t`Complete sign-in in your browser, then return to Anarlog.`}
       onBack={onBack}
       onClose={onClose}
+      action={
+        url ? (
+          <div className="flex w-full flex-col gap-2">
+            <Button
+              variant="outline"
+              className={cn([ACTION_BUTTON_CLASS])}
+              disabled={reopen.isPending}
+              onClick={() => reopen.mutate(url)}
+            >
+              <Trans>Reopen sign-in page</Trans>
+              <ArrowSquareOut className="size-3.5" />
+            </Button>
+            <Button
+              variant="outline"
+              className={cn([ACTION_BUTTON_CLASS])}
+              disabled={copy.isPending}
+              onClick={() => copy.mutate(url)}
+            >
+              {copy.isSuccess ? (
+                <Check className="size-3.5" />
+              ) : (
+                <Copy className="size-3.5" />
+              )}
+              {copy.isSuccess ? (
+                <Trans>Copied</Trans>
+              ) : (
+                <Trans>Copy sign-in link</Trans>
+              )}
+            </Button>
+          </div>
+        ) : undefined
+      }
     >
       {showCallbackInput ? (
         <>

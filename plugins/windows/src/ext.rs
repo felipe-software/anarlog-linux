@@ -671,9 +671,12 @@ impl AppWindow {
         restore_window_state(app, window, state_flags);
 
         self.position_new_window(app, window)?;
+        #[cfg(not(target_os = "linux"))]
         self.ensure_visible(app, window);
         window.show()?;
         window.set_focus()?;
+        #[cfg(target_os = "linux")]
+        self.ensure_visible_once_shown(app, window);
 
         Ok(())
     }

@@ -1677,6 +1677,7 @@ msgstr ""
 msgid "Conversations: {total}"
 msgstr ""
 
+#: src/instruction/index.tsx
 #: src/settings/dictation.tsx
 #: src/settings/referrals.tsx
 msgid "Copied"
@@ -1714,6 +1715,10 @@ msgstr ""
 
 #: src/settings/general/e2ee-setup.tsx
 msgid "Copy recovery key"
+msgstr ""
+
+#: src/instruction/index.tsx
+msgid "Copy sign-in link"
 msgstr ""
 
 #: src/settings/developers/cloud-api.tsx
@@ -4799,6 +4804,7 @@ msgstr ""
 msgid "Reopen in browser"
 msgstr ""
 
+#: src/instruction/index.tsx
 #: src/settings/general/account.tsx
 msgid "Reopen sign-in page"
 msgstr ""

@@ -19,6 +19,10 @@ const NOTE_WINDOW_OFFSETS: [(f64, f64); 6] = [
 ];
 const NOTE_WINDOW_OVERFLOW_OFFSET: f64 = 48.0;
 static NOTE_WINDOW_POSITIONING_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+#[cfg(target_os = "linux")]
+const SHOWN_FRAME_POLL_ATTEMPTS: u32 = 40;
+#[cfg(target_os = "linux")]
+const SHOWN_FRAME_POLL_INTERVAL: std::time::Duration = std::time::Duration::from_millis(50);
 
 #[cfg(target_os = "windows")]
 fn round_window_corners(window: &tauri::WebviewWindow<tauri::Wry>) {
@@ -100,6 +104,38 @@ impl AppWindow {
         let window = window.clone();
         let _ = crate::ext::run_on_main_thread(&handle, move || {
             this.ensure_visible_on_main_thread(&app, &window);
+        });
+    }
+
+    #[cfg(target_os = "linux")]
+    pub(crate) fn ensure_visible_once_shown(
+        &self,
+        app: &tauri::AppHandle<tauri::Wry>,
+        window: &tauri::WebviewWindow<tauri::Wry>,
+    ) {
+        if !matches!(self, Self::Main) {
+            return;
+        }
+
+        let this = self.clone();
+        let app = app.clone();
+        let window = window.clone();
+        tauri::async_runtime::spawn(async move {
+            let mut previous_frame = None;
+            for _ in 0..SHOWN_FRAME_POLL_ATTEMPTS {
+                tokio::time::sleep(SHOWN_FRAME_POLL_INTERVAL).await;
+                let (Ok(position), Ok(size)) = (window.outer_position(), window.outer_size())
+                else {
+                    return;
+                };
+                let frame = (position, size);
+                let has_frame = size.width > 1 && size.height > 1;
+                if has_frame && previous_frame == Some(frame) {
+                    this.ensure_visible(&app, &window);
+                    return;
+                }
+                previous_frame = has_frame.then_some(frame);
+            }
         });
     }
 
@@ -220,6 +256,7 @@ impl AppWindow {
 
         #[cfg(target_os = "linux")]
         {
+            builder = builder.visible(false);
             if matches!(self, Self::Main) {
                 builder = builder.transparent(true);
             }
@@ -336,6 +373,9 @@ impl AppWindow {
         let window_scale_factor = window.scale_factor()?;
         let monitor_position = monitor.position().to_logical::<f64>(monitor_scale_factor);
         let monitor_size = monitor.size().to_logical::<f64>(monitor_scale_factor);
+        #[cfg(target_os = "linux")]
+        let window_size = window.inner_size()?.to_logical::<f64>(window_scale_factor);
+        #[cfg(not(target_os = "linux"))]
         let window_size = window.outer_size()?.to_logical::<f64>(window_scale_factor);
         let target_label = window.label().to_string();
         let note_windows = app

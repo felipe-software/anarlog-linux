@@ -2,8 +2,10 @@ import { spawn } from "node:child_process";
 import { constants } from "node:fs";
 import {
   access,
+  chmod,
   readdir,
   readFile,
+  rename,
   rm,
   stat,
   writeFile,
@@ -25,6 +27,64 @@ const hostLibraryPatterns = [
 ];
 const gdkBackendDefault = 'export GDK_BACKEND="${GDK_BACKEND:-x11,wayland}"';
 
+// The bundled xdg-utils 1.1.3 predates KDE Plasma 6, where xdg-open does
+// nothing, so the shims run the host's copy outside the AppImage environment.
+const hostXdgUtils = ["xdg-open", "xdg-mime"];
+const bundledXdgSuffix = ".bundled";
+const xdgShimMarker = "# anarlog-host-xdg-shim";
+const xdgShim = `#!/bin/sh
+${xdgShimMarker}
+name=\${0##*/}
+self_dir=$(cd "\${0%/*}" && pwd -P)
+appdir=\${APPDIR:-\${self_dir%/usr/bin}}
+
+without_appdir() {
+  kept=
+  old_ifs=$IFS
+  IFS=:
+  for entry in $1; do
+    case "$entry" in
+      "" | "$appdir" | "$appdir"/*) ;;
+      *) kept=\${kept:+$kept:}$entry ;;
+    esac
+  done
+  IFS=$old_ifs
+  printf '%s' "$kept"
+}
+
+host_path=$(without_appdir "$PATH")
+host=
+old_ifs=$IFS
+IFS=:
+for dir in $host_path; do
+  if [ "$dir" != "$self_dir" ] && [ -x "$dir/$name" ]; then
+    host=$dir/$name
+    break
+  fi
+done
+IFS=$old_ifs
+
+if [ -z "$host" ]; then
+  exec "$self_dir/$name${bundledXdgSuffix}" "$@"
+fi
+
+for list in XDG_DATA_DIRS LD_LIBRARY_PATH; do
+  eval "value=\\\${$list:-}"
+  cleaned=$(without_appdir "$value")
+  if [ -n "$cleaned" ]; then
+    export "$list=$cleaned"
+  else
+    unset "$list"
+  fi
+done
+export PATH="$host_path"
+unset APPDIR APPIMAGE ARGV0 OWD GDK_BACKEND GDK_PIXBUF_MODULE_FILE \\
+  GIO_EXTRA_MODULES GI_TYPELIB_PATH GSETTINGS_SCHEMA_DIR GTK_DATA_PREFIX \\
+  GTK_EXE_PREFIX GTK_IM_MODULE_FILE GTK_PATH GTK_THEME PERLLIB PYTHONHOME \\
+  PYTHONPATH QT_PLUGIN_PATH
+exec "$host" "$@"
+`;
+
 function patchGtkHook(source) {
   if (source.includes(gdkBackendDefault)) {
     return source;
@@ -36,6 +96,33 @@ function patchGtkHook(source) {
     throw new Error("Unrecognized GDK_BACKEND setting in AppImage GTK hook");
   }
   return source.replace(forcedX11, gdkBackendDefault);
+}
+
+async function findUnshimmedXdgUtils(appDirectory) {
+  const binDirectory = path.join(appDirectory, "usr", "bin");
+  const unshimmed = [];
+  for (const name of hostXdgUtils) {
+    const tool = path.join(binDirectory, name);
+    let source;
+    try {
+      source = await readFile(tool, "utf8");
+    } catch (error) {
+      if (error?.code === "ENOENT") continue;
+      throw error;
+    }
+    if (!source.includes(xdgShimMarker)) {
+      unshimmed.push(tool);
+    }
+  }
+  return unshimmed;
+}
+
+async function shimXdgUtils(tools) {
+  for (const tool of tools) {
+    await rename(tool, `${tool}${bundledXdgSuffix}`);
+    await writeFile(tool, xdgShim);
+    await chmod(tool, 0o755);
+  }
 }
 
 async function findSingleBundleEntry(bundleDirectory, suffix, isExpectedType) {
@@ -134,12 +221,19 @@ export async function repackLinuxAppImage({
   const originalGtkHook = await readFile(gtkHook, "utf8");
   const patchedGtkHook = patchGtkHook(originalGtkHook);
   const updatedGtkHook = originalGtkHook !== patchedGtkHook;
+  const xdgUtils = await findUnshimmedXdgUtils(appDirectory);
 
-  if (hostLibraries.length === 0 && !updatedGtkHook) {
+  if (hostLibraries.length === 0 && !updatedGtkHook && xdgUtils.length === 0) {
     console.log(
-      `AppImage already uses host Wayland and PipeWire libraries and GTK backends: ${appImage}`,
+      `AppImage already uses host Wayland and PipeWire libraries, GTK backends, and xdg-utils: ${appImage}`,
     );
-    return { appDirectory, appImage, removedLibraries: [], updatedGtkHook };
+    return {
+      appDirectory,
+      appImage,
+      removedLibraries: [],
+      updatedGtkHook,
+      shimmedXdgUtils: [],
+    };
   }
 
   if (!arch) {
@@ -155,6 +249,7 @@ export async function repackLinuxAppImage({
   if (updatedGtkHook) {
     await writeFile(gtkHook, patchedGtkHook);
   }
+  await shimXdgUtils(xdgUtils);
   await Promise.all(hostLibraries.map((library) => rm(library)));
 
   const remainingLibraries = await findBundledHostLibraries(
@@ -202,6 +297,7 @@ export async function repackLinuxAppImage({
     appImage,
     removedLibraries: hostLibraries,
     updatedGtkHook,
+    shimmedXdgUtils: xdgUtils,
   };
 }
 
