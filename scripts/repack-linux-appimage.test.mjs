@@ -22,6 +22,7 @@ async function createFixture(
     withWaylandLibraries = true,
     withAudioLibraries = false,
     patchedGtkHook = false,
+    shimmedXdgUtils = false,
   } = {},
 ) {
   const directory = await mkdtemp(
@@ -60,6 +61,18 @@ async function createFixture(
   );
   await chmod(gtkHook, 0o755);
   await writeFile(path.join(libraryDirectory, "libgtk-3.so.0"), "gtk");
+  const binDirectory = path.join(appDirectory, "usr", "bin");
+  await mkdir(binDirectory, { recursive: true });
+  for (const name of ["xdg-open", "xdg-mime"]) {
+    const tool = path.join(binDirectory, name);
+    await writeFile(
+      tool,
+      shimmedXdgUtils
+        ? "#!/bin/sh\n# anarlog-host-xdg-shim\n"
+        : `#!/bin/sh\necho "bundled ${name} $*"\n`,
+    );
+    await chmod(tool, 0o755);
+  }
   if (withWaylandLibraries) {
     await writeFile(
       path.join(libraryDirectory, "libwayland-client.so.0"),
@@ -86,7 +99,23 @@ async function createFixture(
   await writeFile(plugin, "plugin");
   await chmod(plugin, 0o755);
 
-  return { directory, appDirectory, appImage, plugin, gtkHook };
+  return { directory, appDirectory, appImage, plugin, gtkHook, binDirectory };
+}
+
+async function repackWithStubs(fixture, arch = "x86_64") {
+  return repackLinuxAppImage({
+    arch,
+    bundleDirectory: fixture.directory,
+    pluginPath: fixture.plugin,
+    run: async (command) => {
+      await writeFile(
+        command === fixture.plugin
+          ? fixture.appImage
+          : `${fixture.appImage}.sig`,
+        "regenerated",
+      );
+    },
+  });
 }
 
 test("removes Wayland libraries, repacks, and regenerates the signature", async (t) => {
@@ -209,6 +238,7 @@ test("keeps an already-clean AppImage and its signature unchanged", async (t) =>
   const fixture = await createFixture(t, {
     withWaylandLibraries: false,
     patchedGtkHook: true,
+    shimmedXdgUtils: true,
   });
 
   const result = await repackLinuxAppImage({
@@ -271,6 +301,45 @@ test("repacks a hook-only fix and preserves explicit GTK backend preferences", a
     );
     assert.equal(backend, `${expected}:unchanged`);
   }
+});
+
+test("routes xdg-utils to the host copy without the AppImage environment", async (t) => {
+  const fixture = await createFixture(t, {
+    withWaylandLibraries: false,
+    patchedGtkHook: true,
+  });
+  const hostBin = path.join(fixture.directory, "host-bin");
+  await mkdir(hostBin);
+  await writeFile(
+    path.join(hostBin, "xdg-open"),
+    '#!/bin/sh\necho "host $1 gtk=${GTK_PATH-unset} data=$XDG_DATA_DIRS"\n',
+  );
+  await chmod(path.join(hostBin, "xdg-open"), 0o755);
+
+  const result = await repackWithStubs(fixture);
+
+  assert.deepEqual(
+    result.shimmedXdgUtils.map((tool) => path.basename(tool)),
+    ["xdg-open", "xdg-mime"],
+  );
+  const appBin = fixture.binDirectory;
+  const env = {
+    APPDIR: fixture.appDirectory,
+    GTK_PATH: path.join(fixture.appDirectory, "usr", "lib", "gtk-3.0"),
+    PATH: `${appBin}:${hostBin}`,
+    XDG_DATA_DIRS: `${fixture.appDirectory}/usr/share:/usr/share`,
+  };
+  const run = (name) =>
+    execFileSync(path.join(appBin, name), ["https://anarlog.so/auth"], {
+      env,
+      encoding: "utf8",
+    }).trim();
+
+  assert.equal(
+    run("xdg-open"),
+    "host https://anarlog.so/auth gtk=unset data=/usr/share",
+  );
+  assert.equal(run("xdg-mime"), "bundled xdg-mime https://anarlog.so/auth");
 });
 
 for (const [name, prepare, options, error] of [
