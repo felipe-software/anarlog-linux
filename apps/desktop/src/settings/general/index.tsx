@@ -10,6 +10,7 @@ import { CircleNotch } from "@anlg/ui/components/icons";
 export { SettingsAccount } from "./account";
 import { AppSettingsView } from "./app-settings";
 import { AudioSettingsView } from "./audio-settings";
+import { CameraWatermarkSettings } from "./camera-watermark";
 import {
   CORE_TRANSCRIPTION_LANGUAGE_CODES,
   getAdditionalSpokenLanguages,
@@ -274,12 +275,6 @@ function SettingsSectionContent({
                     {(field) => (
                       <SettingSwitchRow
                         title={<Trans>Use main language for summaries</Trans>}
-                        description={
-                          <Trans>
-                            When off, summaries follow the detected meeting
-                            language.
-                          </Trans>
-                        }
                         checked={field.state.value}
                         onChange={field.handleChange}
                       />
@@ -383,6 +378,8 @@ function SettingsSectionContent({
               }}
             />
           </div>
+
+          <CameraWatermarkSettings />
         </>
       )}
     </div>

@@ -60,16 +60,12 @@ pub struct Env {
     pub posthog_api_key: Option<String>,
     #[serde(default)]
     pub anarlog_attachment_backup_gc_enabled: bool,
-    #[serde(default, deserialize_with = "anlg_api_env::filter_empty")]
-    pub sqlitecloud_cloudsync_management_api_key: Option<String>,
 
     #[serde(flatten)]
     pub observability: crate::observability::Env,
 
     #[serde(flatten)]
     pub supabase: anlg_api_env::SupabaseEnv,
-    #[serde(flatten)]
-    pub sync: anlg_api_sync::SyncEnv,
     #[serde(flatten)]
     nango: OptionalNangoEnv,
     #[serde(flatten)]
@@ -461,6 +457,29 @@ mod tests {
             .unwrap();
             assert!(error.contains("only supported by core or all"));
         }
+    }
+
+    #[test]
+    fn cleanup_owner_resolves_without_sqlitecloud_env_vars() {
+        let cleanup = [
+            ("ANARLOG_ATTACHMENT_BACKUP_GC_ENABLED", "true"),
+            ("NANGO_API_KEY", "nango"),
+            ("NANGO_WEBHOOK_SIGNING_KEY", "signing"),
+            ("STRIPE_SECRET_KEY", "sk_test_cleanup"),
+            ("STRIPE_MONTHLY_PRICE_ID", "price_monthly"),
+            ("STRIPE_YEARLY_PRICE_ID", "price_yearly"),
+            ("LOOPS_KEY", "loops"),
+        ];
+        assert!(role_config("core", &cleanup).is_ok());
+
+        let leftover_sqlitecloud = [
+            ("SQLITECLOUD_PROJECT_URL", "invalid-url"),
+            ("SQLITECLOUD_TOKEN_ISSUER_API_KEY", "issuer"),
+            ("ANARLOG_CLOUDSYNC_E2EE_DATABASE_ID", "managed-e2ee"),
+            ("SQLITECLOUD_CLOUDSYNC_MANAGEMENT_API_KEY", "management"),
+            ("ANARLOG_SQLITECLOUD_MODE", "enabled"),
+        ];
+        assert!(role_config("core", &[&cleanup[..], &leftover_sqlitecloud[..]].concat()).is_ok());
     }
 
     #[test]

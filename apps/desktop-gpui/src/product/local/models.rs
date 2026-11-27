@@ -1,0 +1,649 @@
+use std::{
+    collections::HashMap,
+    path::PathBuf,
+    process::Stdio,
+    sync::{Arc, Mutex},
+    time::Duration,
+};
+
+use anlg_local_model::LocalModel;
+use anlg_model_downloader::{DownloadStatus, ModelDownloadManager, ModelDownloaderRuntime};
+use desktop_runtime::{CancellationToken, Result, ServiceError};
+use tokio::process::{Child, Command};
+
+use super::failure;
+
+/// The executables Argmax and GGUF models run in. Shipping's packages include neither (it runs
+/// only Soniqo and Apple Speech on device, in process), so packaged builds offer these models
+/// as not available.
+pub struct EngineResources {
+    pub argmax: PathBuf,
+    pub llama_server: PathBuf,
+    pub argmax_api_key: String,
+}
+
+pub const UNAVAILABLE_ON_PLATFORM: &str = "Unavailable on this platform";
+pub const NOT_IN_BUILD: &str = "Not available in this build";
+
+struct DownloadRuntime {
+    directory: PathBuf,
+    progress: Mutex<HashMap<LocalModel, DownloadStatus>>,
+}
+
+impl ModelDownloaderRuntime<LocalModel> for DownloadRuntime {
+    fn models_base(&self) -> std::result::Result<PathBuf, anlg_model_downloader::Error> {
+        Ok(self.directory.clone())
+    }
+    fn emit_progress(&self, model: &LocalModel, status: DownloadStatus) {
+        if let Ok(mut progress) = self.progress.lock() {
+            progress.insert(model.clone(), status);
+        }
+    }
+}
+
+pub struct ModelService {
+    downloader: ModelDownloadManager<LocalModel>,
+    runtime: Arc<DownloadRuntime>,
+    resources: EngineResources,
+    running: tokio::sync::Mutex<[Option<RunningModel>; 2]>,
+    capture_active: Arc<dyn Fn() -> bool + Send + Sync>,
+}
+
+struct RunningModel {
+    model: LocalModel,
+    url: String,
+    child: Option<Child>,
+}
+
+#[derive(Clone, Debug)]
+pub struct ModelState {
+    pub model: LocalModel,
+    pub installed: bool,
+    pub running: bool,
+    pub in_use: bool,
+    pub progress: Option<DownloadStatus>,
+    /// Why this model can't be downloaded or started here, if it can't.
+    pub unavailable: Option<&'static str>,
+}
+
+impl ModelService {
+    pub fn new(directory: PathBuf, resources: EngineResources) -> Self {
+        let runtime = Arc::new(DownloadRuntime {
+            directory,
+            progress: Mutex::new(HashMap::new()),
+        });
+        Self {
+            downloader: ModelDownloadManager::new(runtime.clone()),
+            runtime,
+            resources,
+            running: tokio::sync::Mutex::new([None, None]),
+            capture_active: Arc::new(|| false),
+        }
+    }
+
+    pub fn with_capture_active(
+        mut self,
+        capture_active: Arc<dyn Fn() -> bool + Send + Sync>,
+    ) -> Self {
+        self.capture_active = capture_active;
+        self
+    }
+
+    pub fn is_in_process_busy(&self, model: &LocalModel) -> bool {
+        matches!(model, LocalModel::Soniqo(_) | LocalModel::AppleSpeech(_))
+            && (self.capture_active)()
+    }
+
+    pub fn registry() -> Vec<LocalModel> {
+        anlg_local_stt_core::SUPPORTED_MODELS
+            .iter()
+            .cloned()
+            .chain(
+                anlg_local_llm_core::SUPPORTED_MODELS
+                    .iter()
+                    .cloned()
+                    .map(LocalModel::GgufLlm),
+            )
+            .collect()
+    }
+
+    /// Models the download manager is fetching, with their percentage, for the app toast.
+    pub fn active_downloads(&self) -> Vec<(String, u8)> {
+        let mut downloads = self
+            .runtime
+            .progress
+            .lock()
+            .map(|progress| {
+                progress
+                    .iter()
+                    .filter_map(|(model, status)| match status {
+                        DownloadStatus::Downloading(percent) => {
+                            Some((model.display_name(), *percent))
+                        }
+                        _ => None,
+                    })
+                    .collect::<Vec<_>>()
+            })
+            .unwrap_or_default();
+        downloads.sort();
+        downloads
+    }
+
+    pub fn resolve(key: &str) -> Result<LocalModel> {
+        Self::registry()
+            .into_iter()
+            .find(|m| m.cli_name() == key)
+            .ok_or_else(|| failure("Unknown or unsupported model"))
+    }
+
+    /// Why `model` can't run here: the platform, or an engine this build doesn't include.
+    pub fn unavailable(&self, model: &LocalModel) -> Option<&'static str> {
+        if !model.is_available_on_current_platform() {
+            return Some(UNAVAILABLE_ON_PLATFORM);
+        }
+        let engine = match model {
+            LocalModel::Am(_) => &self.resources.argmax,
+            LocalModel::GgufLlm(_) => &self.resources.llama_server,
+            _ => return None,
+        };
+        (!engine.is_file()).then_some(NOT_IN_BUILD)
+    }
+
+    fn ensure_available(&self, model: &LocalModel) -> Result<()> {
+        match self.unavailable(model) {
+            Some(UNAVAILABLE_ON_PLATFORM) => Err(failure(
+                "This model requires Apple Silicon; choose a cloud transcription provider on this platform",
+            )),
+            Some(_) => Err(failure(format!(
+                "{} is not available in this build of Anarlog; choose another model or provider",
+                model.display_name()
+            ))),
+            None => Ok(()),
+        }
+    }
+
+    pub async fn state(&self, model: LocalModel) -> Result<ModelState> {
+        let unavailable = self.unavailable(&model);
+        if unavailable == Some(UNAVAILABLE_ON_PLATFORM) {
+            return Ok(ModelState {
+                model,
+                installed: false,
+                running: false,
+                in_use: false,
+                progress: None,
+                unavailable,
+            });
+        }
+        let mut native_progress = None;
+        let installed = match model.clone() {
+            LocalModel::Soniqo(native) if model.is_available_on_current_platform() => {
+                let state = tokio::task::spawn_blocking(move || {
+                    anlg_transcribe_soniqo::model_download_state(native)
+                })
+                .await
+                .map_err(failure)?
+                .map_err(failure)?;
+                native_progress =
+                    download_status(&state.status, state.progress_percent, state.error);
+                state.status == "ready"
+            }
+            LocalModel::AppleSpeech(_) if model.is_available_on_current_platform() => {
+                match tokio::task::spawn_blocking(|| {
+                    anlg_transcribe_speechanalyzer::settings_locale().and_then(|locale| {
+                        anlg_transcribe_speechanalyzer::model_download_state(&locale)
+                    })
+                })
+                .await
+                .map_err(failure)?
+                {
+                    Ok(state) => {
+                        native_progress =
+                            download_status(&state.status, state.progress_percent, state.error);
+                        state.status == "ready"
+                    }
+                    Err(
+                        error @ anlg_transcribe_speechanalyzer::Error::NoSupportedSystemLanguage,
+                    ) => {
+                        native_progress = Some(DownloadStatus::Failed(error.to_string()));
+                        false
+                    }
+                    Err(error) => return Err(failure(error)),
+                }
+            }
+            _ => self
+                .downloader
+                .is_downloaded(&model)
+                .await
+                .map_err(failure)?,
+        };
+        let mut running = self.running.lock().await;
+        let running = &mut running[model_slot(&model)];
+        if let Some(current) = running.as_mut()
+            && let Some(child) = current.child.as_mut()
+            && child.try_wait().map_err(failure)?.is_some()
+        {
+            *running = None;
+        }
+        Ok(ModelState {
+            running: running.as_ref().is_some_and(|r| r.model == model),
+            in_use: self.is_in_process_busy(&model),
+            progress: native_progress.or(self
+                .runtime
+                .progress
+                .lock()
+                .map_err(|_| failure("Model state lock poisoned"))?
+                .get(&model)
+                .cloned()),
+            model,
+            installed,
+            unavailable,
+        })
+    }
+
+    pub async fn download(&self, model: LocalModel) -> Result<()> {
+        self.ensure_available(&model)?;
+        match model {
+            LocalModel::Soniqo(native) => tokio::task::spawn_blocking(move || {
+                anlg_transcribe_soniqo::start_model_download(native)
+            })
+            .await
+            .map_err(failure)?
+            .map_err(failure),
+            LocalModel::AppleSpeech(_) => tokio::task::spawn_blocking(|| {
+                anlg_transcribe_speechanalyzer::settings_locale().and_then(|locale| {
+                    anlg_transcribe_speechanalyzer::start_model_download(&locale)
+                })
+            })
+            .await
+            .map_err(failure)?
+            .map_err(failure),
+            _ => self.downloader.download(&model).await.map_err(failure),
+        }
+    }
+
+    pub async fn cancel(&self, model: LocalModel) -> Result<()> {
+        if self.is_in_process_busy(&model) {
+            return Err(failure(
+                "Finish the active recording before changing or resetting this model",
+            ));
+        }
+        match model {
+            LocalModel::Soniqo(native) => {
+                tokio::task::spawn_blocking(move || anlg_transcribe_soniqo::reset_model(native))
+                    .await
+                    .map_err(failure)?
+                    .map_err(failure)
+            }
+            LocalModel::AppleSpeech(_) => tokio::task::spawn_blocking(|| {
+                anlg_transcribe_speechanalyzer::settings_locale()
+                    .and_then(|locale| anlg_transcribe_speechanalyzer::release_locale(&locale))
+            })
+            .await
+            .map_err(failure)?
+            .map_err(failure),
+            _ => self
+                .downloader
+                .cancel_download(&model)
+                .await
+                .map(|_| ())
+                .map_err(failure),
+        }
+    }
+
+    pub async fn delete(&self, model: LocalModel) -> Result<()> {
+        if self.is_in_process_busy(&model) {
+            return Err(failure(
+                "Finish the active recording before deleting this model",
+            ));
+        }
+        if self.running.lock().await[model_slot(&model)]
+            .as_ref()
+            .is_some_and(|r| r.model == model)
+        {
+            return Err(failure("Stop this model before deleting it"));
+        }
+        self.cancel(model.clone()).await?;
+        match model {
+            LocalModel::Soniqo(native) => {
+                tokio::task::spawn_blocking(move || anlg_transcribe_soniqo::delete_model(native))
+                    .await
+                    .map_err(failure)?
+                    .map_err(failure)
+            }
+            LocalModel::AppleSpeech(_) => Ok(()),
+            _ => self.downloader.delete(&model).await.map_err(failure),
+        }
+    }
+
+    /// Soniqo and Apple Speech transcribe in process, so a batch run needs no realtime session
+    /// (which batch-only models cannot open); like shipping's `start_server`, this checks
+    /// availability and download state and returns the local pseudo-URL.
+    pub async fn batch(&self, model: LocalModel, cancel: CancellationToken) -> Result<String> {
+        match &model {
+            LocalModel::Soniqo(_) => {
+                self.ensure_available(&model)?;
+                if !self.state(model).await?.installed {
+                    return Err(failure(
+                        "Download the model in Manage local models before starting it",
+                    ));
+                }
+                Ok(anlg_transcribe_soniqo::LOCAL_BASE_URL.into())
+            }
+            LocalModel::AppleSpeech(_) => {
+                self.ensure_available(&model)?;
+                if !self.state(model).await?.installed {
+                    return Err(failure(
+                        "Download the model in Manage local models before starting it",
+                    ));
+                }
+                Ok(anlg_transcribe_speechanalyzer::LOCAL_BASE_URL.into())
+            }
+            _ => self.start(model, cancel).await,
+        }
+    }
+
+    pub async fn start(&self, model: LocalModel, cancel: CancellationToken) -> Result<String> {
+        self.ensure_available(&model)?;
+        if !self.state(model.clone()).await?.installed {
+            return Err(failure(
+                "Download the model in Manage local models before starting it",
+            ));
+        }
+        let mut running = self.running.lock().await;
+        let running = &mut running[model_slot(&model)];
+        match &model {
+            LocalModel::Soniqo(_) => {
+                stop_running(running).await?;
+                return Ok(anlg_transcribe_soniqo::LOCAL_BASE_URL.into());
+            }
+            LocalModel::AppleSpeech(_) => {
+                stop_running(running).await?;
+                return Ok(anlg_transcribe_speechanalyzer::LOCAL_BASE_URL.into());
+            }
+            _ => {}
+        }
+        if let Some(current) = running.as_ref() {
+            if current.model == model {
+                return Ok(current.url.clone());
+            }
+            return Err(failure("Stop the active model before starting another"));
+        }
+        let (url, child) = match &model {
+            LocalModel::Soniqo(_) | LocalModel::AppleSpeech(_) => {
+                unreachable!("in-process engines return before child startup")
+            }
+            LocalModel::Am(am) => {
+                if self.resources.argmax_api_key.is_empty() {
+                    return Err(failure("Argmax engine credential is missing"));
+                }
+                let port = free_port()?;
+                let mut child = Command::new(&self.resources.argmax)
+                    .args(["--port", &port.to_string()])
+                    .stdin(Stdio::null())
+                    .stdout(Stdio::null())
+                    .stderr(Stdio::null())
+                    .kill_on_drop(true)
+                    .spawn()
+                    .map_err(failure)?;
+                let url = format!("http://127.0.0.1:{port}/v1");
+                let client = anlg_am::Client::new(&url);
+                let mut ready = false;
+                for _ in 0..40 {
+                    if cancel.is_cancelled() {
+                        return Err(ServiceError::Cancelled);
+                    }
+                    if child.try_wait().map_err(failure)?.is_some() {
+                        return Err(failure("Argmax engine exited during startup"));
+                    }
+                    if let Ok(response) = client
+                        .init(
+                            anlg_am::InitRequest::new(self.resources.argmax_api_key.clone())
+                                .with_model(am.clone(), self.runtime.directory.join("stt")),
+                        )
+                        .await
+                        && response.is_success()
+                    {
+                        ready = true;
+                        break;
+                    }
+                    tokio::time::sleep(Duration::from_millis(500)).await;
+                }
+                if !ready {
+                    return Err(failure("Argmax engine did not become ready"));
+                }
+                (url, Some(child))
+            }
+            LocalModel::GgufLlm(_) => {
+                let port = free_port()?;
+                let mut child = Command::new(&self.resources.llama_server)
+                    .arg("--model")
+                    .arg(model.install_path(&self.runtime.directory))
+                    .args(["--host", "127.0.0.1", "--port", &port.to_string()])
+                    .stdin(Stdio::null())
+                    .stdout(Stdio::null())
+                    .stderr(Stdio::null())
+                    .kill_on_drop(true)
+                    .spawn()
+                    .map_err(failure)?;
+                let base = format!("http://127.0.0.1:{port}");
+                let client = reqwest::Client::builder()
+                    .timeout(Duration::from_secs(2))
+                    .build()
+                    .map_err(failure)?;
+                let mut ready = false;
+                for _ in 0..120 {
+                    if cancel.is_cancelled() {
+                        return Err(ServiceError::Cancelled);
+                    }
+                    if child.try_wait().map_err(failure)?.is_some() {
+                        return Err(failure("LLM engine exited during startup"));
+                    }
+                    if let Ok(response) = client.get(format!("{base}/health")).send().await
+                        && response.status().is_success()
+                    {
+                        ready = true;
+                        break;
+                    }
+                    tokio::time::sleep(Duration::from_millis(500)).await;
+                }
+                if !ready {
+                    return Err(failure("LLM engine did not become ready"));
+                }
+                (format!("{base}/v1"), Some(child))
+            }
+            LocalModel::Whisper(_) => {
+                return Err(failure(
+                    "The shipping selectable registry does not include Whisper CPP",
+                ));
+            }
+        };
+        if cancel.is_cancelled() {
+            return Err(ServiceError::Cancelled);
+        }
+        *running = Some(RunningModel {
+            model,
+            url: url.clone(),
+            child,
+        });
+        Ok(url)
+    }
+
+    pub async fn stop(&self) -> Result<()> {
+        let mut running = self.running.lock().await;
+        let mut errors = Vec::new();
+        for current in running.iter_mut() {
+            if let Err(error) = stop_running(current).await {
+                errors.push(error.to_string());
+            }
+        }
+        if errors.is_empty() {
+            Ok(())
+        } else {
+            Err(failure(errors.join("; ")))
+        }
+    }
+
+    pub async fn stop_kind(&self, model: &LocalModel) -> Result<()> {
+        stop_running(&mut self.running.lock().await[model_slot(model)]).await
+    }
+}
+
+fn model_slot(model: &LocalModel) -> usize {
+    usize::from(matches!(model, LocalModel::GgufLlm(_)))
+}
+
+async fn stop_running(running: &mut Option<RunningModel>) -> Result<()> {
+    if let Some(current) = running.as_mut()
+        && let Some(child) = current.child.as_mut()
+        && child.try_wait().map_err(failure)?.is_none()
+    {
+        child.kill().await.map_err(failure)?;
+        child.wait().await.map_err(failure)?;
+    }
+    *running = None;
+    Ok(())
+}
+
+fn download_status(
+    status: &str,
+    percent: Option<u8>,
+    error: Option<String>,
+) -> Option<DownloadStatus> {
+    match status {
+        "ready" => Some(DownloadStatus::Completed),
+        "downloading" => Some(DownloadStatus::Downloading(percent.unwrap_or(0))),
+        _ => error.map(DownloadStatus::Failed),
+    }
+}
+
+fn free_port() -> Result<u16> {
+    std::net::TcpListener::bind("127.0.0.1:0")
+        .and_then(|socket| socket.local_addr())
+        .map(|address| address.port())
+        .map_err(failure)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn models_whose_engine_is_not_in_the_build_are_unavailable() {
+        let directory = tempfile::tempdir().unwrap();
+        let engines = tempfile::tempdir().unwrap();
+        let service = ModelService::new(
+            directory.path().to_owned(),
+            EngineResources {
+                argmax: engines.path().join("argmax"),
+                llama_server: engines.path().join("llama-server"),
+                argmax_api_key: "key".into(),
+            },
+        );
+        let am = LocalModel::Am(anlg_local_model::AmModel::ParakeetV2);
+        // x86_64 builds support no GGUF model, so this also covers the platform refusal there.
+        let gguf = LocalModel::GgufLlm(anlg_local_model::GgufLlmModel::Llama3p2_3bQ4);
+        for model in [am, gguf.clone()] {
+            if !model.is_available_on_current_platform() {
+                assert_eq!(
+                    service.state(model).await.unwrap().unavailable,
+                    Some(UNAVAILABLE_ON_PLATFORM)
+                );
+                continue;
+            }
+            assert_eq!(
+                service.state(model.clone()).await.unwrap().unavailable,
+                Some(NOT_IN_BUILD)
+            );
+            let download = service.download(model.clone()).await.unwrap_err();
+            let start = service
+                .start(model.clone(), CancellationToken::new())
+                .await
+                .unwrap_err();
+            for error in [download, start] {
+                assert!(
+                    error.to_string().contains("not available in this build"),
+                    "{error}"
+                );
+            }
+        }
+
+        std::fs::write(engines.path().join("llama-server"), b"").unwrap();
+        if gguf.is_available_on_current_platform() {
+            assert_eq!(service.state(gguf).await.unwrap().unavailable, None);
+        }
+    }
+
+    #[tokio::test]
+    async fn soniqo_batch_start_checks_availability_without_opening_live_session() {
+        let directory = tempfile::tempdir().unwrap();
+        let engines = tempfile::tempdir().unwrap();
+        let service = ModelService::new(
+            directory.path().to_owned(),
+            EngineResources {
+                argmax: engines.path().join("argmax"),
+                llama_server: engines.path().join("llama-server"),
+                argmax_api_key: String::new(),
+            },
+        );
+        let batch = LocalModel::Soniqo(anlg_local_model::SoniqoModel::ParakeetBatch);
+        match service.start(batch.clone(), CancellationToken::new()).await {
+            Ok(url) => assert_eq!(url, anlg_transcribe_soniqo::LOCAL_BASE_URL),
+            Err(error) => {
+                let message = error.to_string();
+                assert!(
+                    !message.contains("realtime transcription"),
+                    "batch start should not require realtime capability: {message}"
+                );
+                if batch.is_available_on_current_platform() {
+                    assert!(
+                        message.contains("Download"),
+                        "unexpected error on supported platform: {message}"
+                    );
+                } else {
+                    assert!(
+                        message.contains("Apple Silicon"),
+                        "unexpected error on unsupported platform: {message}"
+                    );
+                }
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn in_process_model_delete_and_cancel_reject_while_capture_is_active() {
+        use std::sync::atomic::{AtomicBool, Ordering};
+
+        let directory = tempfile::tempdir().unwrap();
+        let engines = tempfile::tempdir().unwrap();
+        let capturing = Arc::new(AtomicBool::new(true));
+        let capture_flag = capturing.clone();
+        let service = ModelService::new(
+            directory.path().to_owned(),
+            EngineResources {
+                argmax: engines.path().join("argmax"),
+                llama_server: engines.path().join("llama-server"),
+                argmax_api_key: String::new(),
+            },
+        )
+        .with_capture_active(Arc::new(move || capture_flag.load(Ordering::SeqCst)));
+
+        let soniqo = LocalModel::Soniqo(anlg_local_model::SoniqoModel::ParakeetStreaming);
+        let apple_speech = LocalModel::AppleSpeech(anlg_local_model::AppleSpeechModel::Default);
+        for model in [soniqo.clone(), apple_speech.clone()] {
+            let delete_err = service.delete(model.clone()).await.unwrap_err().to_string();
+            assert!(delete_err.contains("recording"), "{delete_err}");
+            let cancel_err = service.cancel(model.clone()).await.unwrap_err().to_string();
+            assert!(cancel_err.contains("recording"), "{cancel_err}");
+            if model.is_available_on_current_platform() {
+                assert!(service.state(model.clone()).await.unwrap().in_use);
+            }
+        }
+
+        capturing.store(false, Ordering::SeqCst);
+        for model in [soniqo, apple_speech] {
+            if model.is_available_on_current_platform() {
+                assert!(!service.state(model).await.unwrap().in_use);
+            }
+        }
+    }
+}

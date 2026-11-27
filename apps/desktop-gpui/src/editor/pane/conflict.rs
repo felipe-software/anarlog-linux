@@ -1,0 +1,499 @@
+//! The open note's conflict banner and version history act on the memo through these.
+
+use std::sync::Arc;
+
+use desktop_runtime::{DocumentSnapshot, ServiceError};
+use gpui::{Context, Task};
+
+use super::{EditorPane, normalize_stored_prosemirror, with_title};
+use crate::editor::{document::Document, model::EditorModel};
+
+impl EditorPane {
+    /// A save that lost to another revision of the note, once that revision has loaded.
+    pub fn save_conflict(&self) -> bool {
+        self.save_failed && self.external.is_some()
+    }
+
+    /// The conflict banner's "Keep this version": saves the draft over the other revision.
+    pub fn keep_draft(&mut self, cx: &mut Context<Self>) {
+        let (Some(model), Some(journal), Some(remote)) =
+            (&mut self.model, &self.journal, self.external.clone())
+        else {
+            return;
+        };
+        if model.composing() || model.read_only {
+            self.message = "Finish composition and enable editing first".into();
+            cx.notify();
+            return;
+        }
+        let next = model.revision + 1;
+        match journal.resolve_conflict(remote.clone(), next, model.document.clone()) {
+            Ok(()) => {
+                model.revision = next;
+                self.init.document = remote;
+                self.external = None;
+                self.message.clear();
+            }
+            Err(error) => self.message = error.to_string(),
+        }
+        cx.notify();
+    }
+
+    /// The conflict banner's "Use the other version": the draft gives way to the other
+    /// revision, which is saved back as the note.
+    pub fn use_external(&mut self, cx: &mut Context<Self>) {
+        let (Some(model), Some(remote)) = (&self.model, self.external.clone()) else {
+            return;
+        };
+        let revision = model.revision;
+        let job = self.parse_stored(remote.body.clone(), remote.body_format.clone(), cx);
+        cx.spawn(async move |this, cx| {
+            let parsed = job.await;
+            let _ = this.update(cx, |this, cx| {
+                if this
+                    .model
+                    .as_ref()
+                    .is_none_or(|model| model.revision != revision)
+                {
+                    this.message = "The draft changed meanwhile; choose again.".into();
+                } else {
+                    match parsed.and_then(|document| this.replace_model(remote, document)) {
+                        Ok(()) => this.message.clear(),
+                        Err(error) => this.message = error,
+                    }
+                }
+                cx.notify();
+            });
+        })
+        .detach();
+    }
+
+    /// Version history's Restore and the banner's "Use the other version": the note becomes
+    /// `body` in one undoable edit, and the task ends once that edit is saved (shipping awaits
+    /// the write), so a conflict is only dismissed for content that is stored.
+    pub fn restore(
+        &mut self,
+        body: Arc<str>,
+        format: Arc<str>,
+        cx: &mut Context<Self>,
+    ) -> Task<Result<(), String>> {
+        let job = self.parse_stored(body, format, cx);
+        cx.spawn(async move |this, cx| {
+            let document = job.await?;
+            let saved = this
+                .update(cx, |this, cx| {
+                    let model = this.model.as_mut().ok_or("The note is still loading.")?;
+                    if model.composing() {
+                        return Err("Finish composition before restoring.".to_string());
+                    }
+                    let before = model.revision;
+                    let result = model.replace_all(document);
+                    this.edited(before, result.clone(), cx);
+                    result.map(|()| this.flush())
+                })
+                .map_err(|_| "The note was closed.".to_string())??;
+            saved
+                .await
+                .map_err(|_| "The note was closed.".to_string())?
+                .map_err(|error| format!("The restored version was not saved: {error}"))
+        })
+    }
+
+    fn parse_stored(
+        &self,
+        body: Arc<str>,
+        format: Arc<str>,
+        cx: &mut Context<Self>,
+    ) -> Task<Result<Document, String>> {
+        let title = self.title.clone();
+        cx.background_executor().spawn(async move {
+            let body: Arc<str> = match format.as_ref() {
+                "prosemirror_json" => normalize_stored_prosemirror(body),
+                "markdown" => anlg_tiptap::md_to_tiptap_json(&body)?.to_string().into(),
+                format => return Err(format!("Unsupported stored format: {format}")),
+            };
+            Document::parse(with_title(body, title.as_deref()))
+        })
+    }
+
+    fn replace_model(
+        &mut self,
+        remote: DocumentSnapshot,
+        document: Document,
+    ) -> Result<(), String> {
+        let model = self.model.as_ref().ok_or("The note is still loading.")?;
+        if model.composing() || model.read_only {
+            return Err("Finish composition and enable editing first".into());
+        }
+        let next = model.revision + 1;
+        self.journal
+            .as_ref()
+            .ok_or(ServiceError::Closed)
+            .and_then(|journal| journal.resolve_conflict(remote.clone(), next, document.clone()))
+            .map_err(|error| error.to_string())?;
+        let mut model = EditorModel::new(document);
+        model.revision = next;
+        model.read_only = self.read_only;
+        self.list_count = model.document.root.children.render_blocks();
+        self.list.reset(self.list_count);
+        self.model = Some(model);
+        self.init.document = remote;
+        self.external = None;
+        self.projection.clear();
+        Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::time::{Duration, Instant};
+
+    use desktop_runtime::{CancellationToken, Profile, RuntimeHandle, SessionId};
+    use futures::executor::block_on;
+    use gpui::TestAppContext;
+    use serde_json::{Value, json};
+
+    use super::*;
+    use crate::contracts::{EditorInit, LaneContext};
+
+    fn wait(cx: &mut TestAppContext, step: &str, done: impl Fn(&mut TestAppContext) -> bool) {
+        let start = Instant::now();
+        while !done(cx) {
+            assert!(
+                start.elapsed() < Duration::from_secs(30),
+                "editor did not settle: {step}"
+            );
+            cx.run_until_parked();
+            std::thread::sleep(Duration::from_millis(10));
+        }
+    }
+
+    fn execute(runtime: &RuntimeHandle, sql: &'static str, params: Vec<Value>) -> Vec<Value> {
+        let reply = runtime
+            .submit(move |services| async move {
+                services
+                    .executor
+                    .execute(sql.into(), params)
+                    .await
+                    .map_err(|error| ServiceError::Failed(error.to_string().into()))
+            })
+            .unwrap();
+        block_on(reply.receive()).unwrap()
+    }
+
+    fn paragraph(text: &str) -> String {
+        json!({"type": "doc", "content": [
+            {"type": "paragraph", "content": [{"type": "text", "text": text}]}
+        ]})
+        .to_string()
+    }
+
+    #[gpui::test]
+    fn save_conflicts_resolve_to_the_kept_draft_or_the_other_revision(cx: &mut TestAppContext) {
+        cx.executor().allow_parking();
+        cx.update(crate::ui::theme::UiFonts::init);
+        let directory = tempfile::tempdir().unwrap();
+        let (runtime, ready) = RuntimeHandle::start(Profile {
+            database: directory.path().join("library.sqlite"),
+        })
+        .unwrap();
+        block_on(ready.receive()).unwrap();
+        execute(
+            &runtime,
+            "INSERT INTO sessions (id, title) VALUES ('s', 'Note')",
+            vec![],
+        );
+        execute(
+            &runtime,
+            "INSERT INTO session_documents (id, session_id, kind, body_format, body)
+             VALUES ('s', 's', 'note', 'prosemirror_json', ?)",
+            vec![json!(paragraph("Original"))],
+        );
+        let session = SessionId("s".into());
+        let document = block_on(
+            runtime
+                .open_session(session.clone(), CancellationToken::new())
+                .unwrap()
+                .receive(),
+        )
+        .unwrap()
+        .note
+        .unwrap();
+        let context = LaneContext {
+            runtime: runtime.clone(),
+        };
+        let window = cx.add_window(|window, cx| {
+            let init = EditorInit {
+                session_id: session,
+                document,
+                return_focus: cx.focus_handle(),
+            };
+            EditorPane::new(context, init, window, cx)
+        });
+        let editor = window.update(cx, |_, _, cx| cx.entity()).unwrap();
+        wait(cx, "load", |cx| {
+            editor.read_with(cx, |editor, _| editor.model.is_some())
+        });
+        let body = || {
+            execute(
+                &runtime,
+                "SELECT body FROM session_documents WHERE id = 's'",
+                vec![],
+            )[0]["body"]
+                .as_str()
+                .unwrap()
+                .to_owned()
+        };
+
+        for (keep, mine, theirs) in [
+            (true, "Mine one", "Theirs one"),
+            (false, "Mine two", "Theirs two"),
+        ] {
+            // An edit left to the debounced save, unlike Restore, which saves at once.
+            editor.update(cx, |editor, cx| {
+                let model = editor.model.as_mut().unwrap();
+                let before = model.revision;
+                let result = Document::parse(paragraph(mine).into())
+                    .and_then(|document| model.replace_all(document));
+                editor.edited(before, result, cx);
+            });
+            wait(cx, "edit", |cx| {
+                editor.read_with(cx, |editor, _| editor.is_dirty())
+            });
+            // Another writer replaces the note before the draft's debounced save runs.
+            execute(
+                &runtime,
+                "UPDATE session_documents SET body = ?,
+                   updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now', '+1 second')
+                 WHERE id = 's'",
+                vec![json!(paragraph(theirs))],
+            );
+            wait(cx, "conflict", |cx| {
+                editor.read_with(cx, |editor, _| editor.save_conflict())
+            });
+            // The note's conflict banner explains it; the editor adds no status of its own.
+            editor.read_with(cx, |editor, _| assert_eq!(editor.message, ""));
+            editor.update(cx, |editor, cx| {
+                if keep {
+                    editor.keep_draft(cx)
+                } else {
+                    editor.use_external(cx)
+                }
+            });
+            let expected = if keep { mine } else { theirs };
+            wait(cx, "resolve", |cx| {
+                body().contains(expected)
+                    && editor.read_with(cx, |editor, _| {
+                        !editor.is_dirty() && !editor.save_conflict()
+                    })
+            });
+        }
+
+        // A restore once reported success before its save, so the banner dismissed a conflict
+        // whose chosen version was never stored.
+        execute(
+            &runtime,
+            "UPDATE session_documents SET body = ?,
+               updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now', '+2 seconds')
+             WHERE id = 's'",
+            vec![json!(paragraph("Theirs three"))],
+        );
+        wait(cx, "remote revision", |cx| {
+            editor.read_with(cx, |editor, _| editor.external.is_some())
+        });
+        let restore = editor.update(cx, |editor, cx| {
+            editor.restore(
+                paragraph("Mine three").into(),
+                "prosemirror_json".into(),
+                cx,
+            )
+        });
+        let restored = std::rc::Rc::new(std::cell::RefCell::new(None));
+        let result = restored.clone();
+        cx.spawn(|_| async move { *result.borrow_mut() = Some(restore.await) })
+            .detach();
+        wait(cx, "restore", |_| restored.borrow().is_some());
+        assert!(restored.borrow_mut().take().unwrap().is_err());
+        assert!(body().contains("Theirs three"));
+        wait(cx, "restore conflict", |cx| {
+            editor.read_with(cx, |editor, _| editor.save_conflict())
+        });
+        editor.update(cx, |editor, cx| editor.use_external(cx));
+        wait(cx, "restore resolved", |cx| {
+            editor.read_with(cx, |editor, _| {
+                !editor.is_dirty() && !editor.save_conflict()
+            })
+        });
+        drop(editor);
+        cx.update(|cx| {
+            window
+                .update(cx, |_, window, _| window.remove_window())
+                .unwrap()
+        });
+        block_on(runtime.shutdown()).unwrap();
+    }
+
+    #[gpui::test]
+    fn empty_prosemirror_memo_opens_without_error_and_saves_first_edit(cx: &mut TestAppContext) {
+        cx.executor().allow_parking();
+        cx.update(crate::ui::theme::UiFonts::init);
+        let directory = tempfile::tempdir().unwrap();
+        let (runtime, ready) = RuntimeHandle::start(Profile {
+            database: directory.path().join("library.sqlite"),
+        })
+        .unwrap();
+        block_on(ready.receive()).unwrap();
+        execute(
+            &runtime,
+            "INSERT INTO sessions (id, title) VALUES ('s', 'Note')",
+            vec![],
+        );
+        execute(
+            &runtime,
+            "INSERT INTO session_documents (id, session_id, kind, body_format, body)
+             VALUES ('s', 's', 'note', 'prosemirror_json', '')",
+            vec![],
+        );
+        let session = SessionId("s".into());
+        let document = block_on(
+            runtime
+                .open_session(session.clone(), CancellationToken::new())
+                .unwrap()
+                .receive(),
+        )
+        .unwrap()
+        .note
+        .unwrap();
+        let context = LaneContext {
+            runtime: runtime.clone(),
+        };
+        let window = cx.add_window(|window, cx| {
+            let init = EditorInit {
+                session_id: session,
+                document,
+                return_focus: cx.focus_handle(),
+            };
+            EditorPane::new(context, init, window, cx)
+        });
+        let editor = window.update(cx, |_, _, cx| cx.entity()).unwrap();
+        wait(cx, "load", |cx| {
+            editor.read_with(cx, |editor, _| editor.model.is_some())
+        });
+        editor.read_with(cx, |editor, _| assert_eq!(editor.message, ""));
+        editor.update(cx, |editor, cx| {
+            let model = editor.model.as_mut().unwrap();
+            let before = model.revision;
+            let result = model.replace(model.selection.range(), "hello");
+            editor.edited(before, result, cx);
+        });
+        let flush = editor.update(cx, |editor, _| editor.flush());
+        block_on(flush).unwrap().unwrap();
+        let saved = execute(
+            &runtime,
+            "SELECT body FROM session_documents WHERE id = 's'",
+            vec![],
+        )[0]["body"]
+            .as_str()
+            .unwrap()
+            .to_owned();
+        let parsed: Value = serde_json::from_str(&saved).unwrap();
+        assert_eq!(parsed["type"], "doc");
+        assert!(saved.contains("hello"), "{saved}");
+        drop(editor);
+        cx.update(|cx| {
+            window
+                .update(cx, |_, window, _| window.remove_window())
+                .unwrap()
+        });
+        block_on(runtime.shutdown()).unwrap();
+    }
+
+    #[gpui::test]
+    fn empty_prosemirror_memo_merges_remote_revision(cx: &mut TestAppContext) {
+        cx.executor().allow_parking();
+        cx.update(crate::ui::theme::UiFonts::init);
+        let directory = tempfile::tempdir().unwrap();
+        let (runtime, ready) = RuntimeHandle::start(Profile {
+            database: directory.path().join("library.sqlite"),
+        })
+        .unwrap();
+        block_on(ready.receive()).unwrap();
+        execute(
+            &runtime,
+            "INSERT INTO sessions (id, title) VALUES ('s', 'Note')",
+            vec![],
+        );
+        execute(
+            &runtime,
+            "INSERT INTO session_documents (id, session_id, kind, body_format, body)
+             VALUES ('s', 's', 'note', 'prosemirror_json', '')",
+            vec![],
+        );
+        let session = SessionId("s".into());
+        let document = block_on(
+            runtime
+                .open_session(session.clone(), CancellationToken::new())
+                .unwrap()
+                .receive(),
+        )
+        .unwrap()
+        .note
+        .unwrap();
+        let context = LaneContext {
+            runtime: runtime.clone(),
+        };
+        let window = cx.add_window(|window, cx| {
+            let init = EditorInit {
+                session_id: session,
+                document,
+                return_focus: cx.focus_handle(),
+            };
+            EditorPane::new(context, init, window, cx)
+        });
+        let editor = window.update(cx, |_, _, cx| cx.entity()).unwrap();
+        wait(cx, "load", |cx| {
+            editor.read_with(cx, |editor, _| editor.model.is_some())
+        });
+        execute(
+            &runtime,
+            "UPDATE session_documents SET body = ?,
+               updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now', '+1 second')
+             WHERE id = 's'",
+            vec![json!(paragraph("Remote edit"))],
+        );
+        wait(cx, "remote revision", |cx| {
+            editor.read_with(cx, |editor, _| editor.external.is_some())
+        });
+        editor.update(cx, |editor, cx| editor.merge_external(cx));
+        wait(cx, "merge", |cx| {
+            editor.read_with(cx, |editor, _| {
+                editor.external.is_none() && !editor.is_dirty()
+            })
+        });
+        let flush = editor.update(cx, |editor, _| editor.flush());
+        block_on(flush).unwrap().unwrap();
+        editor.read_with(cx, |editor, _| {
+            assert!(
+                !editor.message.contains("EOF") && !editor.message.contains("Invalid JSON"),
+                "{}",
+                editor.message
+            );
+        });
+        let saved = execute(
+            &runtime,
+            "SELECT body FROM session_documents WHERE id = 's'",
+            vec![],
+        )[0]["body"]
+            .as_str()
+            .unwrap()
+            .to_owned();
+        assert!(saved.contains("Remote edit"), "{saved}");
+        drop(editor);
+        cx.update(|cx| {
+            window
+                .update(cx, |_, window, _| window.remove_window())
+                .unwrap()
+        });
+        block_on(runtime.shutdown()).unwrap();
+    }
+}

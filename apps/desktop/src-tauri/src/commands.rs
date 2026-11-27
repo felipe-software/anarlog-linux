@@ -8,6 +8,30 @@ const STAGING_BUNDLE_ID: &str = "com.hyprnote.staging";
 
 #[tauri::command]
 #[specta::specta]
+pub fn get_registered_desktop_schemes<R: tauri::Runtime>(app: tauri::AppHandle<R>) -> Vec<String> {
+    let Some(desktop) = app
+        .config()
+        .plugins
+        .0
+        .get("deep-link")
+        .and_then(|config| config.get("desktop"))
+    else {
+        return Vec::new();
+    };
+    let protocols = match desktop.as_array() {
+        Some(protocols) => protocols.as_slice(),
+        None => std::slice::from_ref(desktop),
+    };
+    protocols
+        .iter()
+        .filter_map(|protocol| protocol.get("schemes")?.as_array())
+        .flatten()
+        .filter_map(|scheme| scheme.as_str().map(str::to_owned))
+        .collect()
+}
+
+#[tauri::command]
+#[specta::specta]
 pub async fn get_onboarding_needed<R: tauri::Runtime>(
     app: tauri::AppHandle<R>,
 ) -> Result<bool, String> {
@@ -110,6 +134,39 @@ pub async fn set_recently_opened_sessions<R: tauri::Runtime>(
     v: String,
 ) -> Result<(), String> {
     app.set_recently_opened_sessions(v)
+}
+
+/// Mirrors the web view's localStorage for the native app that replaces this one, which
+/// cannot read it; `anlg_desktop_identity::webview_storage` keeps only the keys it imports.
+#[tauri::command]
+#[specta::specta]
+pub async fn mirror_local_storage<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+    entries: std::collections::HashMap<String, String>,
+) -> Result<(), String> {
+    let locations = anlg_desktop_identity::Locations::resolve(&app.config().identifier)
+        .ok_or("The application data directory is unavailable")?;
+    let storage = anlg_desktop_identity::webview_storage::WebviewStorage::new(&locations);
+    tauri::async_runtime::spawn_blocking(move || storage.write(entries))
+        .await
+        .map_err(|error| error.to_string())?
+        .map_err(|error| error.to_string())?;
+    #[cfg(not(feature = "app-store"))]
+    {
+        use tauri_plugin_updater2::Updater2PluginExt;
+        app.updater2().mark_webview_storage_mirrored();
+    }
+    Ok(())
+}
+
+#[tauri::command]
+#[specta::specta]
+pub fn get_database_dir(state: tauri::State<'_, crate::DatabaseDir>) -> Result<String, String> {
+    state
+        .0
+        .to_str()
+        .map(str::to_owned)
+        .ok_or_else(|| "Database directory path is not valid UTF-8".to_string())
 }
 
 #[tauri::command]

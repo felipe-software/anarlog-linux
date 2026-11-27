@@ -7,14 +7,14 @@ use axum::{Router, middleware};
 use std::{num::NonZeroU32, time::Duration};
 
 pub(crate) fn build_sync_routes(
-    state: Option<anlg_api_sync::AppState>,
-    replica_state: anlg_api_sync::ReplicaState,
+    state: anlg_api_sync::AppState,
     cloudsync_rate_limit_state: rate_limit::RateLimitState,
     device_rate_limit_state: rate_limit::RateLimitState,
     session_share_rate_limit_state: rate_limit::RateLimitState,
     witness_rate_limit_state: rate_limit::RateLimitState,
     auth_state: AuthState,
 ) -> Router {
+    let replica_state = state.replica_state();
     let replica_routes = anlg_api_sync::replica_router(replica_state.clone())
         .route_layer(middleware::from_fn_with_state(
             cloudsync_rate_limit_state.clone(),
@@ -46,10 +46,6 @@ pub(crate) fn build_sync_routes(
             auth::require_auth,
         ));
     let replica_routes = replica_routes.merge(device_routes).merge(witness_routes);
-
-    let Some(state) = state else {
-        return replica_routes;
-    };
 
     let cloudsync_routes = anlg_api_sync::cloudsync_router(state.clone())
         .route_layer(middleware::from_fn_with_state(
@@ -142,8 +138,7 @@ pub(crate) fn router(env: &RuntimeConfig) -> Router {
         .build();
 
     let auth_state = AuthState::new(&env.supabase.supabase_url);
-    let sync_config = anlg_api_sync::SyncConfig::from_env(
-        &env.sync,
+    let sync_config = anlg_api_sync::SyncConfig::new(
         &env.supabase.supabase_url,
         &env.supabase.supabase_anon_key,
         &env.supabase.supabase_service_role_key,
@@ -173,18 +168,22 @@ pub(crate) fn router(env: &RuntimeConfig) -> Router {
         .unwrap_or_else(|error| panic!("Failed to load environment: {error}")),
     );
 
-    let replica_state = anlg_api_sync::ReplicaState::new(
-        anlg_api_sync::ReplicaConfig::new(
-            &env.supabase.supabase_url,
-            &env.supabase.supabase_anon_key,
-            &env.supabase.supabase_service_role_key,
-        )
-        .unwrap_or_else(|error| panic!("Failed to load environment: {error}")),
-    );
-    let sync_state = sync_config.map(anlg_api_sync::AppState::new);
+    tracing::info!("sync_configured");
+    let mut sync_state = anlg_api_sync::AppState::new(sync_config);
+    if let Ok(app_name) = std::env::var("FLY_APP_NAME") {
+        let app_name = app_name.trim().to_string();
+        if !app_name.is_empty() {
+            let self_ip = std::env::var("FLY_PRIVATE_IP")
+                .ok()
+                .map(|ip| ip.trim().to_string())
+                .filter(|ip| !ip.is_empty());
+            sync_state = sync_state.with_fly_wake_discovery(app_name, self_ip, env.port);
+        }
+    }
+    let internal_wake_routes =
+        anlg_api_sync::internal_witness_wake_router(sync_state.replica_state());
     let sync_routes = build_sync_routes(
         sync_state,
-        replica_state,
         cloudsync_rate_limit,
         device_rate_limit,
         session_share_rate_limit,
@@ -228,6 +227,7 @@ pub(crate) fn router(env: &RuntimeConfig) -> Router {
 
     Router::new()
         .nest("/sync", sync_routes)
+        .merge(internal_wake_routes)
         .merge(shared_notes_routes)
         .merge(authenticated_shared_notes_routes)
         .merge(cloud_api_management_routes)

@@ -121,6 +121,7 @@ function Component() {
     redirect,
     provider,
     view: initialView,
+    client,
   } = Route.useSearch();
   const { existingUser, lastSignInMethod } = Route.useRouteContext();
   const [view, setView] = useState<AuthView>(initialView ?? "main");
@@ -164,7 +165,7 @@ function Component() {
     <AuthShell title="Welcome to Anarlog" showEyebrow={false}>
       {view === "main" && (
         <>
-          <TrialOfferCard />
+          {client !== "ios" && <TrialOfferCard />}
           <div className="flex flex-col gap-3">
             {showGoogle && (
               <OAuthButton
@@ -1141,7 +1142,7 @@ function TrialOfferCard() {
   return (
     <div className="mb-5 flex items-center gap-5 rounded-[20px] border border-amber-900/10 bg-white py-4 pr-5 pl-6 shadow-[0_12px_32px_-16px_rgba(120,53,15,0.35)]">
       <div className="flex shrink-0 flex-col items-center">
-        <span className="font-hand text-[40px] leading-[0.9] font-semibold text-amber-800">
+        <span className="text-4xl leading-none font-semibold tracking-tight text-amber-800">
           {WORK_EMAIL_PRO_TRIAL_DAYS}
         </span>
         <span className="mt-1 pl-[0.22em] text-[10px] font-semibold tracking-[0.22em] text-amber-800/70 uppercase">

@@ -17,15 +17,14 @@ in the child skills refer to `.github/workflows/`.
 ## Scope and authorization
 
 - For desktop preparation or publication, select the stable version using the
-  policy below; the user does not need to supply a version. For mobile-only distribution, require the mobile version and
-  explicit store destination; no desktop version or desktop release work is required.
+  policy below; the user does not need to supply a version. For mobile-only distribution, require the mobile version; no desktop version or desktop release work is required.
   Publish only a verified candidate merged into `main`, never the combined
   GitButler workspace. Nightly publication is retired; preserve historical tags
   and installed-client compatibility.
 - A desktop or mobile publication request includes its own changelog, affected public
   surfaces, and website publication. Desktop releases also include the existing
   Microsoft Store lane. Preparation alone does not
-  authorize publication. Mobile submission requires an explicit destination.
+  authorize publication. Mobile releases ship publicly to the App Store and Google Play.
   There is no Mac App Store release lane; do not recreate one.
 - Child skills inherit session authorization and scope. Continue already
   authorized publication without asking again. They do not authorize unrelated
@@ -83,12 +82,11 @@ candidate/published revisions, checks, live or artifact evidence, and unresolved
 ## Execution order
 
 1. Record the selected version, platforms/channel, prior published versions, and
-   candidate source in the matching Linear release issue. Follow
-   [Anarlog workflow](../anarlog-workflow/SKILL.md); keep one release record.
+   candidate source in the matching Linear release issue. Keep one release record.
 2. Read the five surface skills and current workflows. Implement and validate
    needed changes, including the Desktop or Mobile changelog for each requested stream. Prepare
    Mobile notes before freeze; record availability only after verifying the build
-   is available to the intended store/tester audience.
+   is available on the public App Store or Google Play.
    Merge release preparation to `main`, then freeze its exact SHA. A new source change requires renewed affected
    verification; do not mix runs or artifacts from different candidates.
 3. When desktop is in scope, follow [Desktop release procedures](references/desktop.md) for native CI,
@@ -132,7 +130,7 @@ review affected shared surfaces and complete the mobile checks.
 - Microsoft Store submission versus certification/availability, Linux APT results
   versus AUR availability, and any pending external processing.
 - When mobile was requested: source/version, build IDs/numbers, hashes, submission
-  URLs, TestFlight processing/group availability, Google Play track/version code,
+  URLs, App Store review/release status, Google Play production version code,
   verified Mobile publication record, and live Mobile changelog page/index.
 - Reasons for unchanged/not-applicable surfaces, explicit deferrals and impact,
   native coverage gaps, unavailable checks, and unresolved incidents. Publication

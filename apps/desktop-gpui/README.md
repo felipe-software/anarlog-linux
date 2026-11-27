@@ -1,0 +1,515 @@
+# Native GPUI preview (ANLG-320)
+
+This is an opt-in, standalone native package. The existing desktop app remains the
+shipping application and the behavior reference. The implementation comes from PR
+#7720 (`2fc8da4537`), ported to current `main` and to the pinned upstream GPUI
+source.
+
+## Run
+
+The app is its own Cargo workspace (`desktop-gpui` and `runtime/`) with its own
+lockfile and `rust-toolchain.toml`, because upstream GPUI needs a newer Rust than
+the repository workspace. Run cargo from this directory:
+
+```sh
+cargo run --locked
+# Or select a disposable profile / backup copy:
+cargo run --locked -- --profile /absolute/path/to/sandbox
+```
+
+The default is `$HOME/.anarlog-gpui-sandbox/library.sqlite` (Windows:
+`%USERPROFILE%\.anarlog-gpui-sandbox\library.sqlite`). `--profile`
+is a directory, not a database filename. Only use an isolated directory or a
+consistent SQLite backup; do not copy a live WAL database's main file alone.
+
+Packaged builds will instead run in channel mode: CD compiles in
+`ANARLOG_CHANNEL=stable|staging|nightly|dev`, and the app finds that channel's
+shipping data through `crates/desktop-identity` (`src/launch.rs`). Unset builds,
+`cargo run` and tests stay in the sandbox, `--profile` always selects the sandbox,
+and a build kind that would resolve different folders than the shipping channel
+refuses to start (stable and nightly need release, dev needs debug). A channel
+run opens shipping's `app.db` in place, keeps notes, recordings and attachments in
+shipping's data folder (see "Storage folder and takeover marker" below), and reads the channel's secure store under shipping's
+service and account names (E2EE keys and provider keys, chunked like shipping).
+It keeps the sign-in in shipping's session store (`auth.json` on macOS, DPAPI on
+Windows, Secret Service with its fallbacks on Linux), which the bundled CLI shares,
+and its own pending sign-in and share links under `desktop-auth` and `share-links`
+in the channel's secure store; no sandbox name is used. Onboarding, pinned tabs,
+recent notes, the last seen version, the tray toggle and dismissed notices are read
+and written in shipping's `store.json`. Channel builds haven't been through a signed
+rehearsal yet; don't ship one. Launch arguments the shipping app receives
+(`--background`, `--onboarding`, `--updater2-*`, deep-link URLs) are accepted, and
+unknown ones are logged and ignored. A channel build also takes the
+shipping package's names: the channel identifier as Windows' AppUserModelID, the
+executable name as the Linux window class (the desktop entry's `StartupWMClass`), the
+tray ID `anlg-tray`, and on Linux it registers `<executable>-handler.desktop` for the
+channel's schemes at each start, as shipping does.
+Both modes open the database like shipping, with the bundled sqlite-sync extension
+loaded (`anlg_db_core::open_app_db`), so a database that ran sqlite-sync opens and
+migrates; slow migrations show their progress. A channel run waits up to a minute
+for the replaced app's launch and channel locks and applies its "Start fresh"
+marker; a sandbox refuses both at once. The canonical schema is prepared with
+`db-app`. CloudSync follows shipping's `cloud_sync_enabled` setting (on unless
+turned off) and also needs account sign-in and a recovery key; it advertises the
+`replica, accepted_replica` transports.
+
+### Storage folder and takeover marker
+
+Older shipping versions let users keep notes and recordings in another folder, recorded as
+`vault_path` in the data folder's `global.json`; each shipping start moves it back into the
+data folder (`anlg_storage::vault::consolidate_custom_vault`) and retries a failed copy at the
+next start. A channel run checks the same state once it holds shipping's locks
+(`anlg_desktop_identity::vault`): while that move is unfinished it refuses to open and names
+both folders, and it never moves, copies or deletes files itself. A recorded folder that is
+missing or is the data folder itself has nothing to move, so the run opens the data folder as
+shipping does.
+
+The first channel launch that opens the library writes `gpui-takeover.json` in the channel's
+data folder and never rewrites it (`anlg_desktop_identity::takeover`):
+
+```json
+{"version":"1.6.0","at":"2026-11-21T09:30:00Z","bundle":"App"}
+```
+
+`version` is this app's release, `at` when that launch started (RFC 3339, UTC), and `bundle`
+the package type `--print-package` reports (`App` on macOS, `null` for a Linux or Windows binary
+the bundler didn't patch). Readers ignore unknown fields.
+Shipping logs the marker at startup and tags crash reports `gpui_takeover`; it changes no
+other behavior.
+
+The integrated preview mounts the native workspace, TipTap JSON editor,
+transcript/audio pane, and concrete cloud/local product services. The editor
+autosaves through a background journal; save conflicts retain drafts. The note
+header opens transcript/audio, share, and export surfaces; a note can also open in its
+own standalone window with its own editor and save journal. Recording, recovery and
+AI use the selected provider, secure credentials and running local models.
+Missing configuration produces an error; credentials are never fabricated. Errors,
+confirmations and app notices appear as shipping's stacked toasts
+(`application/toasts.rs`); there is no status line.
+Transcription and intelligence settings expose provider/model/base-URL choices
+and a masked API-key input. Keys save separately to the system keyring; provider
+choices use an atomic CAS transaction. Local models are selected by starting
+them through the model manager.
+
+Cloud sign-in requires `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` at build
+or runtime. `VITE_API_URL` and `VITE_WEB_APP_URL` can select another deployment.
+A sandbox profile keeps its own keyring namespace. Models are stored under the
+isolated profile.
+
+Packaged files are found where Tauri's bundler puts them for the shipping app
+(`src/platform/package.rs`): icons and notification icons in the resource folder
+(macOS `Contents/Resources`, the deb's `/usr/lib/<product>`, the AppImage's
+`usr/lib/<product>`, Windows' install folder), and the CLI (`anarlog-cli`) beside
+the executable. Debug builds read icons from `apps/desktop/src-tauri/resources`.
+`ANARLOG_NATIVE_RESOURCES` overrides both with one folder in the packaged layout
+(`icons/<name>.icns`, `notification-icons/`, `anarlog-cli`). The release version is
+`APP_VERSION` at build time, as for the shipping app, else Cargo's.
+
+Shipping runs on-device transcription only through Soniqo and Apple Speech, and an
+on-device LLM only through Apple Foundation Models, all in process; its packages
+include no Argmax or llama.cpp server. Argmax and GGUF models therefore show "Not
+available in this build" unless an `argmax` or `llama-server` executable sits beside
+the app (or in `ANARLOG_NATIVE_RESOURCES`). Argmax also requires `ARGMAX_API_KEY`.
+
+Pinned tabs are restored and saved with CAS: a sandbox profile through
+`app_settings.gpui_pinned_tabs`, a channel run through shipping's `store.json`
+`desktop.PinnedTabs`. Malformed persisted pin data disables pin writes.
+Title/editor/product drafts gate navigation and quit. Like shipping, closing the
+main window (or the application-menu Quit) hides it and the app keeps running in
+the tray; the first ⌘Q only shows the quit overlay. A second ⌘Q (or ⌘⇧Q) or a
+confirmed tray "Quit Completely…" quits through the drain: it flushes all note
+windows, stops/finalizes capture and awaits runtime drain. Failed saves retain
+drafts and keep windows open. OS-forced termination remains outside this
+guarantee; GPUI's generic shutdown callback has a 100 ms timeout.
+
+GPUI is pinned to an upstream `zed-industries/zed` revision without a fork or patch;
+crates.io `gpui` 0.2.2 predates upstream's accessibility integration. On Linux, GPUI needs
+X11 or Wayland, xkbcommon, fontconfig, FreeType, and a Vulkan driver or, without one, EGL
+and OpenGL (the deb therefore only recommends the Vulkan packages).
+Build-only verification does not establish that a particular GPU/desktop works.
+macOS and Windows require their native toolchains and platform validation.
+Use Ubuntu 24.04 or a matching recent PipeWire SDK: Ubuntu 22.04's 0.3.48 SPA
+headers cannot compile the repository's `libspa 0.9.2` dependency. The native
+Linux CI uses Ubuntu 24.04 and never launches a display or audio device.
+The tray also needs GTK 3 and the AppIndicator runtime/development packages.
+
+The app's lockfile started from the repository lockfile so shared crates resolve to
+the same versions; only GPUI's own requirements (for example the ICU 2.3 line)
+move ahead. The repository workspace and its lockfile are unchanged.
+
+## Package
+
+`packaging/bundle.py` runs Tauri's bundler (`tauri bundle`, the `@tauri-apps/cli`
+in `apps/desktop`) over a prebuilt release binary. The Tauri project is still
+`apps/desktop/src-tauri`, with the same `--config` files as `desktop_cd.yaml`, so the
+bundle ID, executable name, Info.plist, entitlements, resources, sidecars, DMG/NSIS/deb/
+AppImage layout, signing, notarization and updater artifacts come from shipping's
+configuration. `packaging/tauri.gpui.json` holds the only differences: GPUI's Linux
+runtime dependencies and no WebView2 installer on Windows.
+
+```sh
+# Stage the sidecars as desktop_cd.yaml does: `cargo xtask prepare-binaries` for the
+# CLI and Chrome host; on macOS also check-permissions (built by shipping's build.rs).
+# The channel is compiled in; keep it the one you bundle, which verify checks.
+ANARLOG_CHANNEL=staging APP_VERSION=1.5.0-dev.1+abc1234 cargo build --locked --release \
+  --target aarch64-apple-darwin
+python3 packaging/bundle.py bundle --channel staging --target aarch64-apple-darwin \
+  --binary target/aarch64-apple-darwin/release/desktop-gpui \
+  --version 1.5.0-dev.1+abc1234 --bundles app,dmg
+# CI-runnable check of a bundle built here or by this repository's CI; it runs the binary:
+python3 packaging/bundle.py verify --channel staging --target aarch64-apple-darwin \
+  --version 1.5.0-dev.1+abc1234 target/packaging.noindex/aarch64-apple-darwin/release/bundle
+```
+
+Signing follows the bundler's environment, as in shipping's CD: `APPLE_SIGNING_IDENTITY`
+(`-` signs ad hoc), the `APPLE_ID`/`APPLE_PASSWORD`/`APPLE_TEAM_ID` notarization trio and
+`TAURI_SIGNING_PRIVATE_KEY` for updater signatures. Pass `--team-id` to `verify` to
+require shipping's Developer ID designated requirement. `CI` defaults to `true`, which
+skips the DMG's Finder layout script; shipping's CD sets `CI=false` to get it.
+
+The release build finds its files where the bundler puts them, as Tauri's
+`resource_dir` does (`src/platform/package.rs`): resources in macOS
+`Contents/Resources`, the deb's `/usr/lib/<product>/`, the AppImage's
+`usr/lib/<product>/` and the NSIS install folder, and the CLI sidecar beside the
+executable. The bundle keeps shipping's layout with no bridge. Build with
+`ANARLOG_CHANNEL` and `APP_VERSION` set to the bundle's channel and version: `verify`
+runs the bundled binary with `--print-package` (the macOS app and the deb's copy) and
+checks the channel, version and package type it reports, and that the folders it reads
+resources and sidecars from are where the bundler put them. `--bundles` limits both
+commands to the package types it names.
+
+## Updates
+
+A channel build updates itself as shipping does (`src/platform/updater.rs`). Its feed URL and
+signing key are shipping's `plugins.updater` for the channel, compiled in from the same
+`tauri.conf` files CD merges, with `{{target}}`, `{{arch}}` and `{{bundle_type}}` filled in as
+Tauri fills them (`darwin-aarch64`, `linux-x86_64-appimage`, `linux-x86_64-deb`,
+`windows-x86_64-nsis`). Stable and nightly have a feed; dev and staging have none, as in
+shipping. A `--profile` run of a channel build doesn't update the package it shares.
+`ANARLOG_NATIVE_UPDATE_URL` replaces the feed for rehearsals (also in a `--profile` run); the
+signing key stays the compiled one.
+
+The feed is checked at startup and every 30 minutes. With "Automatically install updates" on
+(shipping's `automatic_updates` setting), a check outside a meeting also downloads in the
+background, and the update found at startup installs as soon as it has downloaded, unless a
+meeting, onboarding or a settings page is open. Otherwise the toast and tray offer Download and
+Restart. A downloaded update installs only while the feed still offers that version, which every
+install re-checks; one the feed withdrew or replaced (a rollback) is dropped.
+Installing pauses writers and quits through the drain into the new version:
+
+- macOS: the `.app.tar.gz` bundle must satisfy the running app's designated requirement
+  (identifier and team), then replaces the bundle in place, keeping the previous one beside it
+  as `<name>.previous-<id>`. When the folder isn't writable, an administrator prompt moves it,
+  as in shipping, and no previous copy is kept. The executable path started at launch
+  relaunches as the old process quits.
+- AppImage: replaces `$APPIMAGE` the same way and relaunches it.
+- deb: shipping's deb update (`plugins/updater2/src/deb.rs`). An unprivileged
+  `apt-get --simulate` refuses an update whose dependencies apt can't install before any
+  password prompt; then `apt-get install --no-remove --no-install-recommends` of the
+  downloaded deb runs through `pkexec`, else `sudo -S` with a zenity or kdialog password, else
+  `sudo -n`, and a dismissed prompt or failed install stops there. A held dpkg lock fails at once
+  (the meeting check ran just before) and a later pass retries. Without apt-get it falls back
+  to `dpkg -i`. Then `/usr/bin/<executable>` relaunches.
+- Windows: the NSIS installer runs after the drain with shipping's `/P /R /UPDATE /ARGS` and
+  relaunches the app itself.
+
+Which clients the stable feed offers a GPUI build is decided by `apps/web/vercel-build-config.ts`
+(`GPUI_BRIDGE_VERSION`).
+
+## Architecture
+
+- `launch.rs` owns launch arguments and sandbox or channel selection; `main.rs`
+  resolves the data locations and opens the native window.
+- `application.rs`, `application_services.rs`, `native_events.rs` and
+  `note_window.rs` own service construction, pane/window routing, shared
+  capture/playback, recovery, persisted pins, menus/tray/shortcuts/deep links,
+  update barriers and the close/drain flow. `application/lifecycle.rs` holds the one
+  update state that the tray, the app menu and the sidebar update toast all render.
+- `zoom.rs` is shipping's UI zoom (⌘+ / ⌘− / ⌘0 and the View menu, 50–300%, one
+  factor for every window, saved as `zoom.json` in the profile). Views keep literal
+  sizes: `zoom/platform.rs` wraps the GPUI platform so each window reports a
+  `1 / factor` content size at `factor` times the display scale and receives
+  pointer positions divided by the factor. Text is rasterized at the zoomed scale,
+  hit-testing and IME geometry (`ZoomedInput`) stay aligned, and AccessKit sees real
+  points through the root transform. Screen geometry and the traffic lights stay in
+  real points, so their gutters divide by the factor as shipping's do. Windows has
+  no zoom yet and stays at 100%. Headless screens set the same window geometry
+  directly (`ANLG_SCREENS_ONLY=zoom`). The same adapter turns line-based wheel
+  deltas into the pixels shipping's web view scrolls per notch, on every platform:
+  Chromium's 100 px per three wheel lines on Windows, WebKit's 40 px per line on
+  macOS, and WebKitGTK's window height to the 2/3 power per notch on Linux.
+- `ui/` provides source-derived light/dark HSL tokens, the system font policy,
+  embedded existing logo and Hugeicons, focus restoration, and a bounded native
+  text input with UTF-16/IME entry points and clipboard operations. Single-line
+  fields are bounded at 4096 bytes; multiline catalog fields at 128 KiB.
+- `workspace/` has separate shell, virtual list and note entities. A list refresh
+  does not reparse or replace the selected document. List and note reads use
+  cancellation plus monotonically increasing request generations; stale results
+  cannot replace the current view. A previous page remains visible while loading.
+- `desktop-runtime` owns a two-thread Tokio executor on a separate coordinator
+  thread, a 64-item FIFO admission queue and canonical DB services. SQL, disk I/O,
+  parsing for document saves and transaction execution happen there, never in
+  rendering or text replacement. Accepted writes survive dropped receivers.
+  Queue saturation is an explicit `Busy` result; it never silently drops a write.
+- Data reads reuse `db-app`. Atomic writes/CAS use `db-execute`. Reactive queries
+  use `db-reactive` rather than recreating its invalidation rules.
+  Dependencies are table/view/FTS-level, not row-level. The foundation watches
+  `sessions` only, then refreshes the bounded current page. No global settings,
+  templates, contacts or document reload is attached to this signal.
+- `QueryWatch` coalesces replaceable snapshots in one watch slot. Errors use an
+  eight-item reliable queue; overflow records a terminal error and terminates
+  that subscription. At most 32 watches can be live per runtime. Callers must
+  inspect both channels and `terminal_error()`.
+  `unsubscribe().await` is the canonical hard delivery barrier.
+- `shutdown().await` rejects new admission, drains all accepted work, runs
+  registered flush participants and closes the pool before acknowledging.
+  Flush participants run on the runtime and must not enqueue back into the
+  closed queue. Normal window close awaits this acknowledgement. OS-forced
+  termination and GPUI's time-limited application-quit path cannot guarantee it.
+
+`DocumentSnapshot.body` preserves exact stored bytes and unknown fields.
+The isolated native runtime uses one pooled SQLite connection. SQLite's commit
+hook can notify a reactive reader before a large WAL write becomes visible to
+another connection; serializing acquisition makes refreshes wait for the writer.
+Watches also suppress identical snapshots. Increasing the native pool size needs
+a verified post-commit delivery barrier first.
+
+Library navigation caches at most eight aligned pages (456 rows each), bounded
+by an 8 MiB payload estimate. A separate read-only SQLite connection checks
+`PRAGMA data_version` before serving a page and invalidates on committed writes,
+including writes from another process. The canonical query materializes a
+bounded ID page before indexed row lookups. It still scans/sorts without a
+canonical composite expression index; no schema change is made. Run the ignored
+release fixture in `runtime/tests/performance.rs` for raw cached,
+uncached and reference samples; these are not whole-application measurements.
+
+## Remaining parity and validation gates
+
+Screens are compared side by side with the shipping frontend on macOS (see Visual
+parity below). Focus/drag/drop/IME parity, screen-reader behavior, i18n, Linux and
+Windows rendering, hardware/provider/keyring behavior, real floating windows and
+signed packaging/update installation remain unverified. The views publish roles, names
+and states to GPUI's AccessKit tree through `ui::a11y` (shipping's `aria-label`s and
+visible text); `tests/a11y` asserts that tree, but VoiceOver itself has not been run
+against it. A Wayland shortcut portal is missing, and only macOS can hide the main window on
+close; elsewhere closing it quits through the drain. Cloud attachment transfer/hydration, image
+resize handles and full multiline soft wrapping remain incomplete. Shared-note
+previews retain source JSON but do not hydrate published attachments. This is
+not release-ready and does not switch the shipping default.
+Native localization, spellcheck and keyboard/drag-selection parity still need
+work.
+
+`save_document` is an explicit JSON-document API, not a lossless editor
+implementation: it verifies the root and CASes the original body, format and
+timestamp, but cannot prove that a caller retained every unknown node. The editor
+lane must preserve unknown data and refuse unsafe transformations. CAS failures
+must retain the dirty draft and expose reload/merge recovery.
+
+## Visual direction
+
+The native app is intentionally sharper than shipping, like the web app: every corner is
+square (buttons, inputs, menus, dialogs, chips, toggles, avatars, dots and painted shapes),
+and motion is near-instant. Functional transitions, such as a toast entering or leaving,
+the chat panel's reveal and the quit overlay's fade, take 70 ms with linear easing;
+decorative reveals are gone. Continuous indicators (spinners, audio meters, the recording
+pulse and progress) keep their timing. `clippy.toml` disallows GPUI's rounding helpers and
+painted corner radii. The shipping desktop app keeps its rounded look, so parity
+comparisons judge layout, copy and behavior, not radii or easing.
+
+## Visual parity
+
+Both apps render the same seeded library without opening a window:
+
+```sh
+# Native screens (and a copy of the seeded library) into /tmp/screens
+ANLG_SCREENS_DIR=/tmp/screens cargo test --test screens
+# Shipping frontend with Tauri IPC mocked over a disposable copy of that library
+cp /tmp/screens/library.sqlite /tmp/shipping.sqlite
+PARITY_DB=/tmp/shipping.sqlite node parity/serve.mjs &
+node parity/shoot.mjs http://127.0.0.1:1499/app/main /tmp/screens/shipping-main.png
+node parity/shoot.mjs http://127.0.0.1:1499/app/main /tmp/screens/shipping-note.png \
+  --click "Weekly product sync"
+```
+
+`tests/screens/*.sql` hold the fictional library, applied in name order. Tests that
+drive `anlg-audio-mock` stay silent through `.cargo/config.toml` (`MOCK_PLAYBACK=0`). The screens
+run starts with `platform::os::go_headless()`, so a click cannot show a system file dialog or
+alert, open another app, prompt for a permission or play a sound. The shipping capture uses
+headless Chromium from the Playwright cache (`CHROME` overrides it) and prints
+console errors plus any IPC command it had no answer for.
+
+## Module contracts
+
+All modules are registered in `lib.rs` and mounted by `application.rs`.
+The following contracts and ownership boundaries were used by the five fresh
+implementation lanes. Their shared wiring now lives in the host modules above.
+
+### Path ownership
+
+| Owner | Exclusive paths |
+| --- | --- |
+| Workspace | `apps/desktop-gpui/src/workspace/**` |
+| Editor | `apps/desktop-gpui/src/editor/**` |
+| Meeting | `apps/desktop-gpui/src/meeting/**` |
+| Product | `apps/desktop-gpui/src/product/**` |
+| Runtime | `apps/desktop-gpui/runtime/**`, `apps/desktop-gpui/src/runtime_bridge.rs`, `apps/desktop-gpui/src/platform/**` |
+| Final integrator | Root/shared manifests and lockfiles, all CI, `apps/desktop-gpui/{Cargo.toml,build.rs,README.md,scripts/**,assets/**}`, `src/{main.rs,lib.rs,contracts.rs,ui/**}`, `runtime/Cargo.toml` |
+
+Workspace can create `workspace/theme.rs` for application-specific layout or
+theme state, but must consume common `ui::theme::Theme`, not duplicate token
+values. Existing domain crates and existing desktop/web/mobile code are outside
+every lane's write ownership. Needed changes/extractions there, including
+transport-neutral Tantivy, go to the integrator with the exact proposed patch.
+No lane changes schema, credentials, release defaults or security policies.
+
+### Shared symbols
+
+Imports below are public from the `desktop_gpui` and `desktop_runtime` libraries:
+
+```rust,ignore
+use desktop_gpui::contracts::{
+    LaneContext, EditorInit, EditorEvent, MeetingIntent, MeetingEvent,
+    ProductRoute, ProductEvent, WorkspaceEvent,
+};
+use desktop_runtime::{
+    RuntimeHandle, Profile, Reply, Services, CancellationToken, Generation,
+    SessionId, DocumentId, HumanId, AttachmentId,
+    SessionSummary, LibraryQuery, LibraryPage, OpenSession, DocumentSnapshot,
+    RenameSession, SaveDocument, LoadState, ServiceError, QueryWatch,
+};
+```
+
+`LaneContext { runtime: RuntimeHandle }` is cheap to clone. Immutable snapshots
+use `Arc`; resource IDs are typed strings so imported IDs are not forced into a
+UUID format. `LoadState<T>` distinguishes pending/ready/error/unsupported and
+retains previous snapshots. `Reply<T>::receive().await -> Result<T>` can be
+awaited by a GPUI task; it does not require a Tokio runtime on the UI thread.
+
+`RuntimeHandle` APIs:
+
+```rust,ignore
+start(Profile) -> std::io::Result<(RuntimeHandle, Reply<()>)>
+library(LibraryQuery, CancellationToken) -> Result<Reply<LibraryPage>>
+open_session(SessionId, CancellationToken) -> Result<Reply<OpenSession>>
+create_note(Arc<str>) -> Result<Reply<OpenSession>>
+rename_session(RenameSession) -> Result<Reply<OpenSession>>
+save_document(SaveDocument) -> Result<Reply<DocumentSnapshot>>
+watch_library() -> Result<Reply<QueryWatch>>
+watch_query(String, Vec<serde_json::Value>) -> Result<Reply<QueryWatch>>
+submit(FnOnce(Services) -> SendFuture<Result<T>>) -> Result<Reply<T>>
+read(CancellationToken, FnOnce(Services) -> SendFuture<Result<T>>) -> Result<Reply<T>>
+register_flush(FlushParticipant) -> Result<Reply<()>>
+shutdown().await -> Result<()>
+```
+
+`submit`/`read` are worker entry points, not UI SQL APIs. Domain-specific
+typed operations belong in runtime submodules. Independent long-running service
+work uses a 16-item queue with at most four concurrent jobs, separate from the
+serialized database coordinator.
+`register_flush` must be acknowledged before starting a durable producer.
+Cancellation is for superseded reads, never an accepted authoritative write.
+
+### Constructors and event routing
+
+Each constructor below returns `Self`, called through `cx.new(|cx| ...)`.
+Views implement GPUI `Render` and the indicated `EventEmitter<Event>`.
+Subscribe with `cx.subscribe` and retain the `Subscription`.
+Workspace also implements `Focusable`; use its focus handle for
+`EditorInit::return_focus`.
+
+| Lane | Public constructor |
+| --- | --- |
+| Workspace | `workspace::WorkspaceView::new(LaneContext, Reply<()>, &mut Window, &mut Context<Self>)` |
+| Editor | `editor::EditorPane::new(LaneContext, EditorInit, &mut Window, &mut Context<Self>)` |
+| Meeting | `meeting::MeetingPane::new(LaneContext, MeetingIntent, &mut Window, &mut Context<Self>)` |
+| Product | `product::ProductPane::new(LaneContext, ProductRoute, &mut Window, &mut Context<Self>)` |
+| Runtime | `runtime_bridge::start(Profile) -> std::io::Result<(RuntimeHandle, Reply<()>)>` |
+
+The integrator starts the runtime once, gives the readiness reply only to
+workspace, and clones `LaneContext` into every other pane.
+
+- Workspace emits `WorkspaceEvent::OpenEditor { session_id, document }`,
+  `Meeting(MeetingIntent)` and `Product(ProductRoute)`. The final integrator
+  creates/focuses the corresponding pane. Workspace owns session/folder
+  selection, tabs, navigation history, search, contacts, calendar, templates and
+  automations. It does not own document JSON or recorder internals.
+  The host handles editor, meeting, product, shared-preview and standalone-window
+  routes and forwards saved-note/capture events to automation execution.
+- Editor receives `EditorInit { session_id, document, return_focus }`. It emits
+  `Dirty { session_id, dirty }`, `Saved(DocumentSnapshot)`,
+  `SaveFailed { session_id, error }`, `OpenLink(Arc<str>)`,
+  `OpenAttachment(AttachmentId)` and `MentionHuman(HumanId)`.
+  Dirty/save failure is authoritative and must not be coalesced away.
+  The integrator handles external navigation and close guards. Native selection,
+  rich text, UTF-16 mapping, IME/CJK, history, menus, clipboard, attachment
+  insertion, lossless unknown nodes, concurrent sync and autosave belong here.
+  The shared single-line input is not the rich-text editor.
+- Meeting receives `MeetingIntent::{Open(SessionId), Start { session_id }, Stop}`.
+  It emits `Recording { session_id, active }`, `OpenSession(SessionId)` and
+  `Failed(ServiceError)`. The intent enum is a request, never proof that capture
+  started. Runtime/audio workers must acknowledge start/stop and durable final
+  transcript events. Meeting owns devices/capture, live partial/final words,
+  speakers, retention including Never, recovery, playback/waveform, summaries and
+  local/hosted AI execution. Keep transcript delivery reliable and partial UI
+  snapshots coalesced independently.
+- Product receives `ProductRoute::{Onboarding, Permissions, Settings, Account,
+  Billing, CloudSync, Share(SessionId), Import, Export(SessionId), Models,
+  Integrations}`. It emits `NavigateWorkspace`, `OpenSession(SessionId)` and
+  `Failed(ServiceError)`. Auth/E2EE/settings orchestration, imports/exports and
+  product integration state belong here. Never represent an unavailable
+  provider, permission, license or secret as successful.
+- Runtime owns paths/profile policy, native platform adapters, reactive
+  subscription lifecycle, cancellation, startup/drain barriers, localization and
+  accessibility foundations, and release-build instrumentation/fixtures.
+  `platform::WindowRole::{Main, Settings, MeetingOverlay}` and
+  `PlatformEvent::{DeepLink(String), Shortcut(String), OpenMainWindow,
+  Failed(ServiceError)}` define the native boundary. Concrete adapters are
+  installed by the host; unsupported platform cases remain explicit errors.
+
+### Assets and theme
+
+`build.rs` derives all HSL colors from
+`packages/design-system/src/tokens.css`; the radius token is unused (see Visual
+direction). The CSS RGBA keyboard-shadow tokens are not yet native shadow primitives.
+`ui::theme::UiFonts` uses San Francisco and SF Mono on macOS (shipping's `system-ui`
+and `ui-monospace`), and `Segoe UI` or Linux `sans-serif` elsewhere. Use
+`ui::theme::MEDIUM` for `font-medium`: font-kit reads SF's Medium face as weight 530.
+The existing logo is embedded directly. Hugeicons SVGs are generated from the
+repository-pinned `@hugeicons/core-free-icons` package:
+
+```sh
+node apps/desktop-gpui/scripts/export-icons.mjs
+```
+
+Keep generated SVGs checked in so Rust builds do not require Node. Ask the
+integrator to extend the generator/asset map for additional icons. Do not add
+an unrelated icon family or replace the repository font policy.
+
+## Verification and remaining gates
+
+From `apps/desktop-gpui` (matches `.github/workflows/gpui_ci.yaml`):
+
+```sh
+cargo fmt --check
+cargo test --locked --workspace
+cargo clippy --locked --workspace --all-targets --no-deps -- -D warnings
+cargo build --locked
+```
+
+The runtime tests use temporary databases only, covering durable reopen,
+opaque JSON preservation, CAS conflict and deleted-document rejection,
+queue saturation/drain, flush barriers, cancellation and reactive unsubscribe.
+Input model tests cover UTF-16, grapheme deletion and composition-relative ranges.
+These do not validate native input methods. `tests/a11y` runs the app on a windowless
+platform that switches AccessKit on and asserts the accessibility tree (roles, names,
+states, text runs, focus, and presses as a screen reader sends them). Integration coverage
+also exercises rich-document save/reopen through `SaveJournal`, preservation of
+opaque/table/task content, competing writes, explicit conflict resolution, and
+pin CAS/corrupt-storage behavior.
+
+`cargo run --locked -- --profile /absolute/path/to/sandbox` (from this directory) runs the native binary.
+
+Equivalent release-build old/new profiling with reproducible large-library,
+large-document and streaming fixtures is required before claiming any speed,
+memory or responsiveness improvement. A successful Linux build is only a
+build-viability result. See the remaining parity and validation gates above.

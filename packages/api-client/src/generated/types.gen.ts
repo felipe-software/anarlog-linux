@@ -237,21 +237,6 @@ export type CloudApiSettings = {
     updated_at?: string | null;
 };
 
-export type CloudsyncCredentialResponse = LegacyCloudsyncCredentials | CloudsyncCredentials | ReplicaCredentials;
-
-export type CloudsyncCredentials = {
-    accountUserId: string;
-    databaseId: string;
-    encryptionKeyId: string;
-    encryptionVersion: number;
-    expiresAt: string;
-    personalWorkspaceId: string;
-    token: string;
-    workspaceId: string;
-    workspaceKeyGrants: Array<WorkspaceE2EeKeyGrant>;
-    workspaces: Array<CloudsyncWorkspace>;
-};
-
 export type CloudsyncWorkspace = {
     createdAt: string;
     id: string;
@@ -281,6 +266,21 @@ export type CollectionRef = {
      */
     name: string;
     url?: string | null;
+};
+
+export type CommitSnapshotRequest = {
+    formatVersion: number;
+    keyId: string;
+    objectKey: string;
+    payloadBytes: number;
+    payloadSha256: string;
+    recordCount: number;
+    snapshotSequence: number;
+};
+
+export type CommitSnapshotResponse = {
+    committed: boolean;
+    snapshotSequence: number;
 };
 
 export type ConferenceCreateRequest = {
@@ -1048,13 +1048,6 @@ export type LabelRef = {
 
 export type LabelType = 'system' | 'user' | 'unknown';
 
-export type LegacyCloudsyncCredentials = {
-    databaseId: string;
-    expiresAt: string;
-    token: string;
-    workspaceId: string;
-};
-
 export type LegacySessionShareSnapshotRequest = {
     attachmentIds?: Array<string> | null;
     body: unknown;
@@ -1455,6 +1448,20 @@ export type PickerStart = {
 
 export type PipelineStatus = 'processing' | 'done' | 'error';
 
+export type PrepareSnapshotUploadRequest = {
+    keyId: string;
+    payloadBytes: number;
+    payloadSha256: string;
+    recordCount: number;
+    snapshotSequence: number;
+};
+
+export type PrepareSnapshotUploadResponse = {
+    objectKey: string;
+    token: string;
+    uploadUrl: string;
+};
+
 export type Profile = {
     emailAddress: string;
     historyId?: string | null;
@@ -1765,10 +1772,26 @@ export type SlackSendRequest = {
     text: string;
 };
 
+export type SnapshotDescriptor = {
+    cloudAuthorityAfter?: number | null;
+    downloadUrl: string;
+    formatVersion: number;
+    headSequence: number;
+    keyId: string;
+    payloadBytes: number;
+    payloadSha256: string;
+    recordCount: number;
+    snapshotSequence: number;
+};
+
 export type SnapshotReceipt = {
     published_at: string;
     revision: number;
     session_id: string;
+};
+
+export type SnapshotResponse = {
+    snapshot?: null | SnapshotDescriptor;
 };
 
 export type Speaker = {
@@ -4864,6 +4887,10 @@ export type ReadE2EeWitnessErrors = {
      */
     403: unknown;
     /**
+     * E2EE witness history compacted; bootstrap from snapshot
+     */
+    410: unknown;
+    /**
      * Witness service unavailable
      */
     502: unknown;
@@ -4938,6 +4965,13 @@ export type ReadAcceptedE2EeReplicaData = {
     url: '/sync/e2ee/witness/{workspace_id}/accepted';
 };
 
+export type ReadAcceptedE2EeReplicaErrors = {
+    /**
+     * E2EE witness history compacted; bootstrap from snapshot
+     */
+    410: unknown;
+};
+
 export type ReadAcceptedE2EeReplicaResponses = {
     /**
      * Accepted cloud state and legacy cutover boundary
@@ -4975,6 +5009,122 @@ export type AcceptE2EeReplicaBatchResponses = {
 };
 
 export type AcceptE2EeReplicaBatchResponse = AcceptE2EeReplicaBatchResponses[keyof AcceptE2EeReplicaBatchResponses];
+
+export type ReadLatestE2EeSnapshotData = {
+    body?: never;
+    path: {
+        /**
+         * Workspace ID
+         */
+        workspace_id: string;
+    };
+    query?: never;
+    url: '/sync/e2ee/witness/{workspace_id}/snapshot';
+};
+
+export type ReadLatestE2EeSnapshotErrors = {
+    /**
+     * Authentication required
+     */
+    401: unknown;
+    /**
+     * Workspace access denied
+     */
+    403: unknown;
+    /**
+     * Snapshot service unavailable
+     */
+    502: unknown;
+};
+
+export type ReadLatestE2EeSnapshotResponses = {
+    /**
+     * Latest encrypted workspace snapshot descriptor
+     */
+    200: SnapshotResponse;
+};
+
+export type ReadLatestE2EeSnapshotResponse = ReadLatestE2EeSnapshotResponses[keyof ReadLatestE2EeSnapshotResponses];
+
+export type CommitE2EeSnapshotData = {
+    body: CommitSnapshotRequest;
+    path: {
+        /**
+         * Workspace ID
+         */
+        workspace_id: string;
+    };
+    query?: never;
+    url: '/sync/e2ee/witness/{workspace_id}/snapshot/commit';
+};
+
+export type CommitE2EeSnapshotErrors = {
+    /**
+     * Invalid snapshot commit or checksum mismatch
+     */
+    400: unknown;
+    /**
+     * Authentication required
+     */
+    401: unknown;
+    /**
+     * Workspace access denied
+     */
+    403: unknown;
+    /**
+     * Snapshot service unavailable
+     */
+    502: unknown;
+};
+
+export type CommitE2EeSnapshotResponses = {
+    /**
+     * Snapshot metadata committed
+     */
+    200: CommitSnapshotResponse;
+};
+
+export type CommitE2EeSnapshotResponse = CommitE2EeSnapshotResponses[keyof CommitE2EeSnapshotResponses];
+
+export type PrepareE2EeSnapshotUploadData = {
+    body: PrepareSnapshotUploadRequest;
+    path: {
+        /**
+         * Workspace ID
+         */
+        workspace_id: string;
+    };
+    query?: never;
+    url: '/sync/e2ee/witness/{workspace_id}/snapshot/upload';
+};
+
+export type PrepareE2EeSnapshotUploadErrors = {
+    /**
+     * Invalid snapshot upload metadata
+     */
+    400: unknown;
+    /**
+     * Authentication required
+     */
+    401: unknown;
+    /**
+     * Workspace access denied
+     */
+    403: unknown;
+    /**
+     * Snapshot service unavailable
+     */
+    502: unknown;
+};
+
+export type PrepareE2EeSnapshotUploadResponses = {
+    /**
+     * Signed Storage upload URL for encrypted snapshot
+     */
+    200: PrepareSnapshotUploadResponse;
+};
+
+export type PrepareE2EeSnapshotUploadResponse = PrepareE2EeSnapshotUploadResponses[keyof PrepareE2EeSnapshotUploadResponses];
 
 export type WaitE2EeWitnessData = {
     body?: never;
@@ -5162,6 +5312,10 @@ export type CreateReplicaCredentialsData = {
          * Account-level member identity public key
          */
         'x-anarlog-e2ee-member-public-key'?: string | null;
+        /**
+         * Comma-separated transports the client accepts; `accepted_replica` is required
+         */
+        'x-anarlog-cloudsync-transports'?: string | null;
     };
     path?: never;
     query?: never;
@@ -5185,6 +5339,10 @@ export type CreateReplicaCredentialsErrors = {
      * Account already uses a different recovery key
      */
     409: unknown;
+    /**
+     * Client predates the accepted replica
+     */
+    426: unknown;
     /**
      * Replica credential service unavailable
      */
@@ -5485,7 +5643,7 @@ export type CreateCredentialsData = {
          */
         'x-anarlog-e2ee-member-public-key'?: string | null;
         /**
-         * Comma-separated transports the client accepts; include `replica` to allow witness-only credentials
+         * Comma-separated transports the client accepts; `accepted_replica` is required
          */
         'x-anarlog-cloudsync-transports'?: string | null;
     };
@@ -5496,6 +5654,10 @@ export type CreateCredentialsData = {
 
 export type CreateCredentialsErrors = {
     /**
+     * Invalid E2EE key identity
+     */
+    400: unknown;
+    /**
      * Authentication required
      */
     401: unknown;
@@ -5504,20 +5666,24 @@ export type CreateCredentialsErrors = {
      */
     403: unknown;
     /**
-     * Desktop upgrade required
+     * Account already uses a different recovery key
+     */
+    409: unknown;
+    /**
+     * Client update required
      */
     426: unknown;
     /**
-     * Credential issuer unavailable
+     * Credential service unavailable
      */
     502: unknown;
 };
 
 export type CreateCredentialsResponses = {
     /**
-     * Short-lived CloudSync credentials
+     * Encrypted replica credentials
      */
-    200: CloudsyncCredentialResponse;
+    200: ReplicaCredentials;
 };
 
 export type CreateCredentialsResponse = CreateCredentialsResponses[keyof CreateCredentialsResponses];

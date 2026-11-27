@@ -11,7 +11,6 @@ use uuid::{Uuid, Version};
 
 use crate::{
     SubscriptionConfig,
-    cloudsync_cleanup::CloudsyncCleanupClient,
     error::{Result, SubscriptionError},
     supabase::SupabaseClient,
 };
@@ -40,7 +39,6 @@ pub struct CleanupWorker {
     supabase: SupabaseClient,
     storage: anlg_supabase_storage::SupabaseStorage,
     stripe: stripe::Client,
-    cloudsync: Option<CloudsyncCleanupClient>,
 }
 
 #[derive(Serialize)]
@@ -132,15 +130,10 @@ impl CleanupWorker {
         );
         let storage = supabase.storage();
         let stripe = stripe::Client::new(&config.stripe.stripe_secret_key);
-        let cloudsync = config
-            .cloudsync_cleanup
-            .clone()
-            .map(CloudsyncCleanupClient::new);
         Self {
             supabase,
             storage,
             stripe,
-            cloudsync,
         }
     }
 
@@ -495,13 +488,9 @@ impl CleanupWorker {
             if cancellation.is_cancelled() {
                 return Ok(());
             }
-            let cloudsync = self.cloudsync.as_ref().ok_or_else(|| {
-                SubscriptionError::Internal("CloudSync cleanup is not configured".to_string())
-            })?;
-            cloudsync.purge_and_confirm(&row.e2ee_workspace_ids).await?;
-            if cancellation.is_cancelled() {
-                return Ok(());
-            }
+            // Encrypted replica rows live only in Supabase, so deleting the auth
+            // user below cascades through the owned workspaces to remove them.
+            // `finish_account_deletion` still requires this checkpoint RPC first.
             let marked: bool = self
                 .supabase
                 .admin_rpc(

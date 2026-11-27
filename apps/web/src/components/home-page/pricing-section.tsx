@@ -18,7 +18,7 @@ export function PricingSection({
   return (
     <section id="pricing" className="pt-24 pb-8 md:pt-28 md:pb-10">
       <div>
-        <Heading className="font-hand text-3xl leading-none font-semibold text-[#756b5d]">
+        <Heading className="text-2xl leading-tight font-semibold tracking-tight text-[#756b5d] md:text-3xl">
           Simple pricing
         </Heading>
         <p className="mx-auto mt-6 max-w-2xl text-lg leading-8 text-[#4f4940]">
@@ -53,14 +53,14 @@ function PricingCard({ plan }: { plan: MarketingPlanData }) {
   return (
     <article
       className={cn([
-        "surface border-color-subtle flex min-h-[32rem] flex-col rounded-3xl border p-6 shadow-sm transition-all duration-200 [corner-shape:squircle]",
+        "surface border-color-subtle flex min-h-[32rem] flex-col rounded-3xl border p-6 shadow-sm transition-all duration-75 [corner-shape:squircle]",
         plan.popular
           ? "border-color-bright ring-fg/10 shadow-lg ring-1"
           : "hover:border-color-brand hover:shadow-md",
       ])}
     >
       <div className="flex items-start">
-        <h3 className="font-hand text-2xl leading-none font-semibold text-[#181613]">
+        <h3 className="text-xl leading-tight font-semibold tracking-tight text-[#181613]">
           {plan.name}
         </h3>
       </div>

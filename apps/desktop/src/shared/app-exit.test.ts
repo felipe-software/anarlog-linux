@@ -1,18 +1,25 @@
+import type { EditorView } from "prosemirror-view";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   analyticsEvent: vi.fn().mockResolvedValue({ status: "ok", data: null }),
   completeAppExit: vi.fn().mockResolvedValue(undefined),
-  flushDatabaseWritesWithin: vi.fn().mockResolvedValue(undefined),
-  listener: null as (() => void) | null,
+  flushDatabaseWritesWithin:
+    vi.fn<(timeoutMs: number) => Promise<void> | undefined>(),
+  listener: null as
+    | ((event: { payload: { quick?: boolean } | null }) => void)
+    | null,
+  mirrorLocalStorage: vi.fn().mockResolvedValue({ status: "ok", data: null }),
   save: vi.fn().mockResolvedValue(undefined),
 }));
 
 vi.mock("@tauri-apps/api/event", () => ({
-  listen: vi.fn(async (_event: string, listener: () => void) => {
-    mocks.listener = listener;
-    return vi.fn();
-  }),
+  listen: vi.fn(
+    async (_event: string, listener: NonNullable<typeof mocks.listener>) => {
+      mocks.listener = listener;
+      return vi.fn();
+    },
+  ),
 }));
 
 vi.mock("@anlg/plugin-analytics", () => ({
@@ -23,22 +30,42 @@ vi.mock("@anlg/plugin-store2", () => ({
   commands: { save: mocks.save },
 }));
 
-vi.mock("~/db/write-queue", () => ({
-  flushDatabaseWritesWithin: mocks.flushDatabaseWritesWithin,
+// The real queue, unless a test gives the mock its own result.
+vi.mock("~/db/write-queue", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("~/db/write-queue")>();
+  return {
+    ...actual,
+    flushDatabaseWritesWithin: (timeoutMs: number) =>
+      mocks.flushDatabaseWritesWithin(timeoutMs) ??
+      actual.flushDatabaseWritesWithin(timeoutMs),
+  };
+});
+
+vi.mock("@tauri-apps/api/webviewWindow", () => ({
+  getAllWebviewWindows: vi.fn().mockResolvedValue([]),
+}));
+
+vi.mock("~/store/zustand/tabs", () => ({
+  useTabs: { getState: () => ({ currentTab: null }) },
 }));
 
 vi.mock("~/types/tauri.gen", () => ({
-  commands: { completeAppExit: mocks.completeAppExit },
+  commands: {
+    completeAppExit: mocks.completeAppExit,
+    mirrorLocalStorage: mocks.mirrorLocalStorage,
+  },
 }));
 
 describe("initializeAppExitFlush", () => {
   beforeEach(() => {
     vi.resetModules();
     vi.clearAllMocks();
+    mocks.flushDatabaseWritesWithin.mockReset();
     mocks.listener = null;
     mocks.analyticsEvent.mockResolvedValue({ status: "ok", data: null });
     mocks.completeAppExit.mockResolvedValue(undefined);
-    mocks.flushDatabaseWritesWithin.mockResolvedValue(undefined);
+    mocks.mirrorLocalStorage.mockReset();
+    mocks.mirrorLocalStorage.mockResolvedValue({ status: "ok", data: null });
     mocks.save.mockResolvedValue(undefined);
   });
 
@@ -46,7 +73,7 @@ describe("initializeAppExitFlush", () => {
     const { initializeAppExitFlush } = await import("./app-exit");
     await initializeAppExitFlush();
 
-    mocks.listener?.();
+    mocks.listener?.({ payload: null });
 
     await vi.waitFor(() =>
       expect(mocks.completeAppExit).toHaveBeenCalledOnce(),
@@ -61,6 +88,46 @@ describe("initializeAppExitFlush", () => {
     ).toBeLessThan(mocks.completeAppExit.mock.invocationCallOrder[0]);
   });
 
+  it("saves only queued edits before a confirmed quit exits", async () => {
+    const { initializeAppExitFlush } = await import("./app-exit");
+    const { enqueueDatabaseWrite } = await import("~/db/write-queue");
+    const { registerCanonicalSessionEditor } =
+      await import("~/session-sharing/editor-activity");
+    const saved: string[] = [];
+    const save = (sessionId: string, body: string) => () => {
+      void enqueueDatabaseWrite(`session:${sessionId}`, async () => {
+        await new Promise((resolve) => setTimeout(resolve, 20));
+        saved.push(body);
+      });
+    };
+    // Its last keys still wait in the editor's 500 ms debounce.
+    registerCanonicalSessionEditor(
+      "typed",
+      {} as EditorView,
+      save("typed", "typed: whole view"),
+      save("typed", "typed: last keys"),
+    );
+    // Focused with newer stored content deferred, and no local edit queued.
+    registerCanonicalSessionEditor(
+      "synced",
+      {} as EditorView,
+      save("synced", "synced: older view"),
+      () => {},
+    );
+    let savedAtExit: string[] = [];
+    mocks.completeAppExit.mockImplementation(async () => {
+      savedAtExit = [...saved];
+    });
+    await initializeAppExitFlush();
+
+    mocks.listener?.({ payload: { quick: true } });
+
+    await vi.waitFor(() =>
+      expect(mocks.completeAppExit).toHaveBeenCalledOnce(),
+    );
+    expect(savedAtExit).toEqual(["typed: last keys"]);
+  });
+
   it("still exits when flushing fails", async () => {
     const error = new Error("write failed");
     const consoleError = vi
@@ -70,7 +137,7 @@ describe("initializeAppExitFlush", () => {
     const { initializeAppExitFlush } = await import("./app-exit");
     await initializeAppExitFlush();
 
-    mocks.listener?.();
+    mocks.listener?.({ payload: null });
 
     await vi.waitFor(() =>
       expect(mocks.completeAppExit).toHaveBeenCalledOnce(),
@@ -89,11 +156,60 @@ describe("initializeAppExitFlush", () => {
     const { initializeAppExitFlush } = await import("./app-exit");
     await initializeAppExitFlush();
 
-    mocks.listener?.();
+    mocks.listener?.({ payload: null });
     await vi.advanceTimersByTimeAsync(4999);
     expect(mocks.completeAppExit).not.toHaveBeenCalled();
     await vi.advanceTimersByTimeAsync(1);
     expect(mocks.completeAppExit).toHaveBeenCalledOnce();
     vi.useRealTimers();
+  });
+
+  it("flushes localStorage mirror before a confirmed quick exit completes", async () => {
+    let finishMirror = () => {};
+    mocks.mirrorLocalStorage.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          finishMirror = () => resolve({ status: "ok", data: null });
+        }),
+    );
+    const { initializeAppExitFlush } = await import("./app-exit");
+    await initializeAppExitFlush();
+
+    mocks.listener?.({ payload: { quick: true } });
+
+    await vi.waitFor(() =>
+      expect(mocks.mirrorLocalStorage).toHaveBeenCalledOnce(),
+    );
+    expect(mocks.completeAppExit).not.toHaveBeenCalled();
+
+    finishMirror();
+
+    await vi.waitFor(() =>
+      expect(mocks.completeAppExit).toHaveBeenCalledOnce(),
+    );
+  });
+
+  it("still exits a confirmed quick quit when localStorage mirroring stalls", async () => {
+    vi.useFakeTimers();
+    try {
+      mocks.mirrorLocalStorage.mockReturnValueOnce(new Promise(() => {}));
+      const consoleError = vi
+        .spyOn(console, "error")
+        .mockImplementation(() => {});
+      try {
+        const { initializeAppExitFlush } = await import("./app-exit");
+        await initializeAppExitFlush();
+
+        mocks.listener?.({ payload: { quick: true } });
+        await vi.advanceTimersByTimeAsync(1999);
+        expect(mocks.completeAppExit).not.toHaveBeenCalled();
+        await vi.advanceTimersByTimeAsync(1);
+        expect(mocks.completeAppExit).toHaveBeenCalledOnce();
+      } finally {
+        consoleError.mockRestore();
+      }
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

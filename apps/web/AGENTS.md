@@ -41,8 +41,8 @@ Note: there is no `--color-brand` token. CTAs use `from-stone-600 to-stone-500`.
 
 ### Typography
 
-- **Body / UI text**: `font-sans` (Geist) — all body copy, labels, nav links
-- **Headings / buttons**: `font-mono` (Geist Mono) — h1/h2, button labels, code
+- **Headings, body & UI text**: `font-sans` (system sans) — h1/h2 display headings, body copy, labels, button labels, nav links (`--font-hand` and `--font-signature` alias system sans)
+- **Code / metadata**: `font-mono` (ui-monospace) — inline code, code blocks, technical metadata
 - **Editorial**: `font-serif` (Fraunces) — editorial emphasis, decorative moments
 - **Italic accent**: `font-serif2` (Instrument Serif) — italic editorial accents
 
@@ -51,14 +51,18 @@ Note: there is no `--color-brand` token. CTAs use `from-stone-600 to-stone-500`.
 Primary CTA uses Tailwind's stone gradient (not a custom token):
 
 ```tsx
-"bg-linear-to-t from-stone-600 to-stone-500 rounded-full text-white";
+"bg-linear-to-t from-stone-600 to-stone-500 text-white";
 ```
 
 Secondary / ghost uses surface + border:
 
 ```tsx
-"border border-neutral-200 bg-white rounded-lg text-neutral-700";
+"border border-neutral-200 bg-white text-neutral-700";
 ```
+
+### Shape and motion
+
+Corners are square everywhere; a base rule in `src/styles.css` forces `border-radius: 0`, so don't add `rounded-*` classes. Transitions default to 70ms; use `duration-75` when a duration is needed, with no decorative easing or slow reveals. See `BRAND.md`.
 
 ## Component structure
 

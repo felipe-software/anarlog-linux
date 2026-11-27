@@ -43,7 +43,8 @@ html[data-rounded-window] #root {
 @theme {
   --font-sans:
     system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  --font-hand: "Bradley Hand", "Segoe Print", "Comic Sans MS", cursive;
+  --font-hand:
+    system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 
   /* Capsule radii still read as pills/circles; remap to a control squircle. */
   --radius-full: 0.5rem;
@@ -309,4 +310,14 @@ html[data-rounded-window] #root {
 .rounded-pill {
   border-radius: calc(infinity * 1px);
   corner-shape: round;
+}
+
+[data-scroll-anchor-container] > :not([data-scroll-anchor]) {
+  overflow-anchor: none;
+}
+
+[data-scroll-anchor-container] > [data-scroll-anchor] {
+  overflow-anchor: auto;
+  height: 1px;
+  flex-shrink: 0;
 }

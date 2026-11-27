@@ -55,7 +55,7 @@ export const MARKETING_PLAN_TIERS: MarketingPlanData[] = [
       { label: "Unlimited on-device transcription", included: true },
       { label: "Local recordings and audio player", included: true },
       { label: "Bring your own keys for STT and AI", included: true },
-      { label: "Notes, folders, and templates", included: true },
+      { label: "Notes, folders, and community templates", included: true },
       { label: "Chat and exports", included: true },
       {
         label: "Local API, CLI, MCP, and webhooks",
@@ -79,6 +79,17 @@ export const MARKETING_PLAN_TIERS: MarketingPlanData[] = [
     features: [
       { label: "Everything in Free", included: true },
       {
+        label: "Scheduled auto-recording and joining",
+        included: true,
+      },
+      { label: "Create and edit custom templates", included: true },
+      {
+        label: "Advanced AI context and web research",
+        included: true,
+        tooltip:
+          "Discover related meetings, retrieve recurring meeting history, and read folder reference files in chat.",
+      },
+      {
         label: "System-wide dictation",
         included: true,
         tooltip:
@@ -88,7 +99,7 @@ export const MARKETING_PLAN_TIERS: MarketingPlanData[] = [
       { label: "Cloud LLM", included: true },
       { label: "Better Speaker Identification", included: true },
       {
-        label: "Cloud sync (3 personal devices or 5 per workspace member)",
+        label: "Cloud sync (unlimited devices)",
         included: true,
       },
       { label: "End-to-end encryption (E2EE)", included: true },

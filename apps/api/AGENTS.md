@@ -47,6 +47,26 @@ email configuration. Optional integration groups are validated only in their
 owning roles. `ANARLOG_ATTACHMENT_BACKUP_GC_ENABLED` is accepted only by `core`
 and `all`. Assign cleanup to one deployment during migration.
 
+## Encrypted replica sync
+
+Sync routes need only Supabase. `/sync/token` and `/sync/replica/credentials`
+issue encrypted replica credentials only to `accepted_replica` clients and
+return `426 cloudsync_upgrade_required` otherwise. Account deletion relies on
+Supabase cascades when deleting the auth user.
+
+Deploy verification checks the encrypted replica using the eight
+`ANARLOG_REPLICA_VERIFY_*` values in `/anarlog/cloudsync` naming two dedicated
+Pro accounts: two fresh devices converge through the serving API and the second
+account is refused the first one's workspace. It runs against the serving API
+before every deploy and again after a `sync` deploy against the candidate.
+Keep account A's recovery key unchanged: the account is bound to its first key
+and each run appends one note to its history. The accounts sign in with their
+passwords under the service role key, because production sign-in requires a
+captcha that Supabase Auth waives only for service credentials. Use addresses
+outside any domain with workspace auto-join, or have the accounts leave that
+workspace: a new account on such a domain takes a team seat and inherits the
+team's plan.
+
 Role selection does not change Fly routing or provision applications. Keep
 existing URLs working while clients and webhook providers migrate.
 

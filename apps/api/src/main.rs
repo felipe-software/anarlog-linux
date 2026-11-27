@@ -135,15 +135,7 @@ async fn app_with_session_gate(
         integrations_configured: env.nango.is_some(),
         billing_configured: env.subscription.is_some(),
         billing_webhooks: env.anarlog_billing_webhooks,
-        cloudsync_configured: service.includes(Service::Sync)
-            && anlg_api_sync::SyncConfig::from_env(
-                &env.sync,
-                &env.supabase.supabase_url,
-                &env.supabase.supabase_anon_key,
-                &env.supabase.supabase_service_role_key,
-            )
-            .expect("sync configuration validated")
-            .is_some(),
+        sync_configured: service.includes(Service::Sync),
         transcription_configured: env
             .stt
             .as_ref()
@@ -357,6 +349,38 @@ fn build_analytics_client(env: &Env) -> Arc<anlg_analytics::AnalyticsClient> {
     Arc::new(builder.build())
 }
 
+async fn bind_dual_stack_listener(
+    port: u16,
+) -> std::io::Result<(tokio::net::TcpListener, SocketAddr)> {
+    let v6_addr = SocketAddr::from((std::net::Ipv6Addr::UNSPECIFIED, port));
+    let v6_attempt = (|| -> std::io::Result<tokio::net::TcpListener> {
+        let socket = socket2::Socket::new(
+            socket2::Domain::IPV6,
+            socket2::Type::STREAM,
+            Some(socket2::Protocol::TCP),
+        )?;
+        socket.set_only_v6(false)?;
+        socket.set_reuse_address(true)?;
+        socket.set_nonblocking(true)?;
+        socket.bind(&v6_addr.into())?;
+        socket.listen(1024)?;
+        tokio::net::TcpListener::from_std(socket.into())
+    })();
+    match v6_attempt {
+        Ok(listener) => {
+            let bound = listener.local_addr().unwrap_or(v6_addr);
+            Ok((listener, bound))
+        }
+        Err(error) => {
+            tracing::warn!(%error, port, "dual-stack IPv6 bind failed; falling back to IPv4");
+            let v4_addr = SocketAddr::from(([0, 0, 0, 0], port));
+            let listener = tokio::net::TcpListener::bind(v4_addr).await?;
+            let bound = listener.local_addr().unwrap_or(v4_addr);
+            Ok((listener, bound))
+        }
+    }
+}
+
 fn main() -> std::io::Result<()> {
     rustls::crypto::aws_lc_rs::default_provider()
         .install_default()
@@ -406,8 +430,7 @@ fn main() -> std::io::Result<()> {
         .enable_all()
         .build()?
         .block_on(async {
-            let addr = SocketAddr::from(([0, 0, 0, 0], env.port));
-            let listener = tokio::net::TcpListener::bind(addr).await.unwrap();
+            let (listener, addr) = bind_dual_stack_listener(env.port).await.unwrap();
             let session_gate = anlg_transcribe_proxy::SessionGate::new();
             let app = app_with_session_gate(env, session_gate.clone()).await;
             let cancellation = CancellationToken::new();
@@ -416,27 +439,8 @@ fn main() -> std::io::Result<()> {
                     .subscription
                     .as_ref()
                     .expect("cleanup requires Stripe and Loops configuration");
-                let cloudsync_cleanup = anlg_api_subscription::CloudsyncCleanupConfig::new(
-                    env.sync
-                        .sqlitecloud_project_url
-                        .as_deref()
-                        .unwrap_or_default(),
-                    env.sync
-                        .sqlitecloud_token_issuer_api_key
-                        .as_deref()
-                        .unwrap_or_default(),
-                    env.sync
-                        .anarlog_cloudsync_e2ee_database_id
-                        .as_deref()
-                        .unwrap_or_default(),
-                    env.sqlitecloud_cloudsync_management_api_key
-                        .as_deref()
-                        .unwrap_or_default(),
-                )
-                .unwrap_or_else(|error| panic!("Failed to load environment: {error}"));
                 let config =
-                    anlg_api_subscription::SubscriptionConfig::new(&env.supabase, stripe, loops)
-                        .with_cloudsync_cleanup(cloudsync_cleanup);
+                    anlg_api_subscription::SubscriptionConfig::new(&env.supabase, stripe, loops);
                 let worker = anlg_api_subscription::CleanupWorker::new(&config);
                 let worker_cancellation = cancellation.clone();
                 tokio::spawn(worker.run(worker_cancellation))
@@ -478,7 +482,7 @@ struct SubsystemHealthState {
     integrations_configured: bool,
     billing_configured: bool,
     billing_webhooks: bool,
-    cloudsync_configured: bool,
+    sync_configured: bool,
     transcription_configured: bool,
     llm_configured: bool,
     session_gate: anlg_transcribe_proxy::SessionGate,
@@ -490,13 +494,13 @@ async fn service_readiness(
 ) -> (StatusCode, Json<serde_json::Value>) {
     let configured = match state.service {
         Service::Ai => state.transcription_configured && state.llm_configured,
-        Service::Sync => state.cloudsync_configured,
+        Service::Sync => state.sync_configured,
         Service::Core => state.integrations_configured && state.billing_configured,
         Service::Billing => state.billing_configured,
         Service::All => {
             state.transcription_configured
                 && state.llm_configured
-                && state.cloudsync_configured
+                && state.sync_configured
                 && state.integrations_configured
                 && state.billing_configured
         }
@@ -536,10 +540,10 @@ async fn sync_health(
     axum::extract::State(state): axum::extract::State<SubsystemHealthState>,
 ) -> (StatusCode, Json<serde_json::Value>) {
     subsystem_health_response(
-        state.cloudsync_configured,
+        state.sync_configured,
         serde_json::json!({
-            "status": if state.cloudsync_configured { "ok" } else { "not_configured" },
-            "configured": state.cloudsync_configured,
+            "status": if state.sync_configured { "ok" } else { "not_configured" },
+            "configured": state.sync_configured,
         }),
     )
 }

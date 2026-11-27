@@ -131,6 +131,7 @@ const validateSearch = z
     referral: z.enum(["ineligible"]),
     perk: z.enum(["applied", "claimed", "invalid"]),
     tab: z.enum(["account", "connections", "notes", "developer"]),
+    client: z.literal("ios"),
   })
   .partial();
 
@@ -232,10 +233,10 @@ function Component() {
         </Link>
 
         <header className="mt-12 md:mt-16">
-          <p className="text-brand-dark font-hand text-2xl leading-none font-semibold">
+          <p className="text-brand-dark text-sm leading-snug font-medium tracking-tight">
             Your account
           </p>
-          <h1 className="font-hand mt-4 text-5xl leading-[0.98] font-semibold tracking-normal text-balance md:text-6xl">
+          <h1 className="mt-3 text-3xl leading-[1.08] font-semibold tracking-[-0.025em] text-balance md:text-4xl">
             Welcome back,{" "}
             <mark className="brand-yellow text-color px-1">
               {user?.email?.split("@")[0] || "Guest"}
@@ -259,18 +260,20 @@ function Component() {
             className="mt-10 flex min-w-0 flex-col gap-14"
           >
             <Suspense fallback={<AccountTabFallback tabId={activeTab} />}>
-              {sectionsForAccountTab(activeTab).map((section) => (
-                <AccountSection key={section.id} id={section.id}>
-                  <AccountSectionBody
-                    id={section.id}
-                    email={user?.email}
-                    expectedUserId={search.account_user_id ?? user!.id}
-                    identityLinkResult={search.identity_link}
-                    perk={search.perk}
-                    referralIneligible={search.referral === "ineligible"}
-                  />
-                </AccountSection>
-              ))}
+              {sectionsForAccountTab(activeTab, search.client).map(
+                (section) => (
+                  <AccountSection key={section.id} id={section.id}>
+                    <AccountSectionBody
+                      id={section.id}
+                      email={user?.email}
+                      expectedUserId={search.account_user_id ?? user!.id}
+                      identityLinkResult={search.identity_link}
+                      perk={search.perk}
+                      referralIneligible={search.referral === "ineligible"}
+                    />
+                  </AccountSection>
+                ),
+              )}
             </Suspense>
           </div>
         </div>
@@ -287,7 +290,7 @@ function AccountTabFallback({ tabId }: { tabId: AccountTabId }) {
       </span>
       {sectionsForAccountTab(tabId).map((section) => (
         <section key={section.id} aria-hidden="true">
-          <h2 className="text-brand-dark font-hand text-3xl leading-none font-semibold">
+          <h2 className="text-brand-dark text-2xl leading-tight font-semibold tracking-tight">
             {section.label}
           </h2>
           <div className="surface-subtle border-color-subtle mt-6 h-28 animate-pulse rounded-[24px] border" />
@@ -309,7 +312,7 @@ function AccountSection({
   return (
     <section ref={scrollHashSectionIntoView} id={id} className="scroll-mt-20">
       {id !== "shares" && (
-        <h2 className="text-brand-dark font-hand text-3xl leading-none font-semibold">
+        <h2 className="text-brand-dark text-2xl leading-tight font-semibold tracking-tight">
           {title}
         </h2>
       )}

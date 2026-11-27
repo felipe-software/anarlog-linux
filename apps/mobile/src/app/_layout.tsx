@@ -1,6 +1,5 @@
 import * as Sentry from "@sentry/react-native";
 import { useMutation, QueryClientProvider } from "@tanstack/react-query";
-import { useFonts } from "expo-font";
 import { type ErrorBoundaryProps, Stack, usePathname } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
@@ -13,8 +12,9 @@ import {
   subscribeMobileCapture,
 } from "@/audio/capture-lifecycle";
 import { recoverInterruptedRecordings } from "@/audio/recover-recordings";
+import { requiresPro } from "@/auth/companion";
 import { AuthProvider, useAuth } from "@/auth/context";
-import { SignInScreen } from "@/auth/screens";
+import { ProRequiredScreen, SignInScreen } from "@/auth/screens";
 import { useTrial } from "@/auth/use-trial";
 import { BrandLoadingView } from "@/components/brand-loading-view";
 import { ToastHost } from "@/components/toast-host";
@@ -130,6 +130,21 @@ function Gate() {
 
   const session = auth.session;
 
+  if (
+    requiresPro &&
+    !captureActive &&
+    auth.status === "signed_in" &&
+    !auth.billing.isPro
+  ) {
+    return (
+      <ProRequiredScreen
+        email={session?.user.email ?? ""}
+        onRefreshBilling={auth.refreshBilling}
+        onSignOut={auth.signOut}
+      />
+    );
+  }
+
   return (
     <>
       {session && auth.billing.isPro && (
@@ -192,13 +207,10 @@ export function ErrorBoundary({ error, retry }: ErrorBoundaryProps) {
 
 function RootLayout() {
   const styles = useStyles();
-  const [fontsLoaded, fontError] = useFonts({
-    CaveatSemiBold: require("../../assets/fonts/Caveat-SemiBold.ttf"),
-  });
   const [startupAnimationComplete, setStartupAnimationComplete] =
     useState(false);
 
-  if (!startupAnimationComplete || (!fontsLoaded && !fontError)) {
+  if (!startupAnimationComplete) {
     return (
       <BrandLoadingView
         animated={!startupAnimationComplete}

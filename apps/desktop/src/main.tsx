@@ -29,6 +29,7 @@ import { AppI18nProvider } from "./i18n/provider";
 import { AppLockGate } from "./lock/gate";
 import { FloatingMeetingWindowHost } from "./meeting-float/host";
 import { routeTree } from "./routeTree.gen";
+import { CameraGuidanceToasts } from "./services/camera-guidance";
 import { EventListeners } from "./services/event-listeners";
 import { TaskManager } from "./services/task-manager";
 import {
@@ -46,6 +47,7 @@ import { initializeAppExitFlush } from "./shared/app-exit";
 import { initializeAppStoreBuild, isAppStoreBuild } from "./shared/app-store";
 import { useConfigValue } from "./shared/config";
 import { ErrorComponent, NotFoundComponent } from "./shared/control";
+import { startLocalStorageMirror } from "./shared/local-storage-mirror";
 import { LongLoadGate } from "./shared/long-load-gate";
 import { startInteractionProfiler } from "./shared/perf/interaction-profiler";
 import { bootstrapThemeFromSettings } from "./shared/theme/apply";
@@ -125,6 +127,7 @@ function ReadyApp() {
             {isMainWindow ? <TaskManager /> : null}
             {isMainWindow ? <FloatingMeetingWindowHost /> : null}
             {isMainWindow ? <EventListeners /> : null}
+            {isMainWindow ? <CameraGuidanceToasts /> : null}
             {isMainWindow ? <TrayScheduleSync /> : null}
             {isMainWindow ? <TrayRecordingSync /> : null}
             {isMainWindow && !isAppStoreBuild() ? <UpdaterMeetingSync /> : null}
@@ -151,6 +154,7 @@ if (isMainWindow) {
       });
     }
   } catch {}
+  startLocalStorageMirror();
   void initializeAppExitFlush().catch((error) => {
     captureOperationalError(error, {
       operation: "app_exit_flush_initialize",

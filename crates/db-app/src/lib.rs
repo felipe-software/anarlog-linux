@@ -1,6 +1,7 @@
 #![forbid(unsafe_code)]
 
 mod attachment_ops;
+mod calendar_ignore_ops;
 mod calendar_ops;
 mod calendar_sync_ops;
 mod calendar_types;
@@ -13,6 +14,7 @@ mod event_types;
 mod folder_catalog_ops;
 mod legacy_import;
 mod managed_settings;
+mod meeting_notice_ops;
 mod pilot_usage_ops;
 mod session_audio_ops;
 mod session_content_ops;
@@ -37,6 +39,7 @@ mod webhook_ops;
 mod webhook_types;
 
 pub use attachment_ops::*;
+pub use calendar_ignore_ops::*;
 pub use calendar_ops::*;
 pub use calendar_sync_ops::*;
 pub use calendar_types::*;
@@ -49,6 +52,7 @@ pub use event_types::*;
 pub use folder_catalog_ops::*;
 pub use legacy_import::*;
 pub use managed_settings::*;
+pub use meeting_notice_ops::*;
 pub use pilot_usage_ops::*;
 pub use session_audio_ops::*;
 pub use session_content_ops::*;
@@ -613,6 +617,11 @@ pub const APP_MIGRATION_STEPS: &[anlg_db_migrate::MigrationStep] = &[
         id: "20261013090000_recording_import_jobs",
         scope: anlg_db_migrate::MigrationScope::Plain,
         sql: include_str!("../migrations/20261013090000_recording_import_jobs.sql"),
+    },
+    anlg_db_migrate::MigrationStep {
+        id: "20261117120500_local_meeting_notice_claims",
+        scope: anlg_db_migrate::MigrationScope::Plain,
+        sql: include_str!("../migrations/20261117120500_local_meeting_notice_claims.sql"),
     },
 ];
 

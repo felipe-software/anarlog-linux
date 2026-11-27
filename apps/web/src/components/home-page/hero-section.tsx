@@ -28,9 +28,9 @@ export function HeroSection() {
       <Link to="/" aria-label="Anarlog home" className="inline-flex">
         <AnarlogLogo className="h-8 w-auto md:h-9" />
       </Link>
-      <h1 className="font-hand mx-auto mt-12 max-w-3xl text-5xl leading-[0.98] font-semibold tracking-normal text-balance md:mt-16 md:text-7xl lg:relative lg:left-1/2 lg:w-max lg:max-w-none lg:-translate-x-1/2 lg:whitespace-nowrap">
-        <span className="font-hand block lg:inline">The AI notepad for</span>{" "}
-        <span className="font-hand block lg:inline">private meetings.</span>
+      <h1 className="mx-auto mt-12 max-w-3xl text-4xl leading-[1.06] font-semibold tracking-[-0.03em] text-balance md:mt-16 md:text-5xl lg:text-6xl">
+        <span className="block lg:inline">The AI notepad for</span>{" "}
+        <span className="block lg:inline">private meetings.</span>
       </h1>
       <p className="mx-auto mt-6 max-w-2xl text-lg leading-8 text-[#4f4940]">
         Take bot-free, open-source meeting notes while keeping sensitive
@@ -162,7 +162,7 @@ function HeroWorkflowDemo() {
         <div className="relative min-h-[260px] overflow-hidden text-left text-sm sm:min-h-[300px]">
           <div
             className={cn([
-              "absolute inset-0 space-y-3 px-5 pt-2 pb-5 transition-opacity duration-500 sm:px-6 sm:pt-3 sm:pb-6",
+              "absolute inset-0 space-y-3 px-5 pt-2 pb-5 transition-opacity duration-75 sm:px-6 sm:pt-3 sm:pb-6",
               isSummaryPhase ? "opacity-0" : "opacity-100",
             ])}
           >
@@ -197,14 +197,14 @@ function HeroWorkflowDemo() {
           </div>
           <div
             className={cn([
-              "absolute inset-0 space-y-4 overflow-hidden px-5 pt-2 pb-5 text-left transition-opacity duration-500 sm:px-6 sm:pt-3 sm:pb-6",
+              "absolute inset-0 space-y-4 overflow-hidden px-5 pt-2 pb-5 text-left transition-opacity duration-75 sm:px-6 sm:pt-3 sm:pb-6",
               isSummaryPhase ? "opacity-100" : "opacity-0",
             ])}
           >
             <div className="space-y-2">
               <h4
                 className={cn([
-                  "font-semibold text-stone-700 transition-opacity duration-500",
+                  "font-semibold text-stone-700 transition-opacity duration-75",
                   enhancedLines >= 1 ? "opacity-100" : "opacity-0",
                 ])}
               >
@@ -213,7 +213,7 @@ function HeroWorkflowDemo() {
               <ul className="list-disc space-y-2 pl-5 text-sm text-neutral-700">
                 <li
                   className={cn([
-                    "transition-opacity duration-500",
+                    "transition-opacity duration-75",
                     enhancedLines >= 1 ? "opacity-100" : "opacity-0",
                   ])}
                 >
@@ -223,7 +223,7 @@ function HeroWorkflowDemo() {
                 </li>
                 <li
                   className={cn([
-                    "transition-opacity duration-500",
+                    "transition-opacity duration-75",
                     enhancedLines >= 2 ? "opacity-100" : "opacity-0",
                   ])}
                 >
@@ -233,7 +233,7 @@ function HeroWorkflowDemo() {
                 </li>
                 <li
                   className={cn([
-                    "transition-opacity duration-500",
+                    "transition-opacity duration-75",
                     enhancedLines >= 3 ? "opacity-100" : "opacity-0",
                   ])}
                 >
@@ -246,7 +246,7 @@ function HeroWorkflowDemo() {
             <div className="space-y-2">
               <h4
                 className={cn([
-                  "font-semibold text-stone-700 transition-opacity duration-500",
+                  "font-semibold text-stone-700 transition-opacity duration-75",
                   enhancedLines >= 4 ? "opacity-100" : "opacity-0",
                 ])}
               >
@@ -255,7 +255,7 @@ function HeroWorkflowDemo() {
               <ul className="list-disc space-y-2 pl-5 text-sm text-neutral-700">
                 <li
                   className={cn([
-                    "transition-opacity duration-500",
+                    "transition-opacity duration-75",
                     enhancedLines >= 4 ? "opacity-100" : "opacity-0",
                   ])}
                 >
@@ -264,7 +264,7 @@ function HeroWorkflowDemo() {
                 </li>
                 <li
                   className={cn([
-                    "transition-opacity duration-500",
+                    "transition-opacity duration-75",
                     enhancedLines >= 5 ? "opacity-100" : "opacity-0",
                   ])}
                 >
@@ -273,7 +273,7 @@ function HeroWorkflowDemo() {
                 </li>
                 <li
                   className={cn([
-                    "transition-opacity duration-500",
+                    "transition-opacity duration-75",
                     enhancedLines >= 5 ? "opacity-100" : "opacity-0",
                   ])}
                 >
@@ -282,7 +282,7 @@ function HeroWorkflowDemo() {
                 </li>
                 <li
                   className={cn([
-                    "transition-opacity duration-500",
+                    "transition-opacity duration-75",
                     enhancedLines >= 5 ? "opacity-100" : "opacity-0",
                   ])}
                 >
@@ -291,7 +291,7 @@ function HeroWorkflowDemo() {
                 </li>
                 <li
                   className={cn([
-                    "transition-opacity duration-500",
+                    "transition-opacity duration-75",
                     enhancedLines >= 5 ? "opacity-100" : "opacity-0",
                   ])}
                 >
@@ -305,7 +305,7 @@ function HeroWorkflowDemo() {
       </div>
       <div
         className={cn([
-          "pointer-events-none absolute right-1 bottom-9 z-10 w-[66%] transition-all duration-500 sm:-right-2 sm:bottom-12 sm:w-[68%]",
+          "pointer-events-none absolute right-1 bottom-9 z-10 w-[66%] transition-all duration-75 sm:-right-2 sm:bottom-12 sm:w-[68%]",
           isSummaryPhase
             ? "translate-y-2 opacity-0"
             : "translate-y-0 opacity-100",

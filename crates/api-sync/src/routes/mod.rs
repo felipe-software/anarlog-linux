@@ -11,9 +11,9 @@ mod shared_attachments;
 
 #[cfg(test)]
 use cloudsync_credentials::{
-    CLOUDSYNC_TRANSPORTS_HEADER, CloudsyncWorkspace, DEVICE_FINGERPRINT_HEADER, DEVICE_NAME_HEADER,
-    E2EE_KEY_ID_HEADER, E2EE_MEMBER_PUBLIC_KEY_HEADER, MAX_TOKEN_ATTRIBUTES_BYTES,
-    MAX_TOKEN_WORKSPACES, WORKSPACE_PROJECTION_SELECT, encode_workspace_token_attributes,
+    ACCEPTED_REPLICA_TRANSPORT, CLOUDSYNC_TRANSPORTS_HEADER, DEVICE_FINGERPRINT_HEADER,
+    DEVICE_NAME_HEADER, E2EE_KEY_ID_HEADER, E2EE_MEMBER_PUBLIC_KEY_HEADER,
+    WORKSPACE_PROJECTION_SELECT,
 };
 #[cfg(test)]
 use session_shares::MAX_SNAPSHOT_RESPONSE_BYTES;
@@ -51,6 +51,10 @@ pub fn session_share_router(state: AppState) -> Router {
 
 pub fn e2ee_witness_router(state: ReplicaState) -> Router {
     e2ee_witness::router().with_state(state)
+}
+
+pub fn internal_witness_wake_router(state: ReplicaState) -> Router {
+    e2ee_witness::internal_wake_router().with_state(state)
 }
 
 pub fn web_edit_router(state: AppState) -> Router {

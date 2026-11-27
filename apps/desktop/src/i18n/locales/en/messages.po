@@ -81,6 +81,11 @@ msgstr "{0} records are too large to apply"
 msgid "{0} records are waiting for an app update"
 msgstr "{0} records are waiting for an app update"
 
+#. placeholder {0}: seconds(item)
+#: src/dictation/recovery.tsx
+msgid "{0} s"
+msgstr "{0} s"
+
 #. placeholder {0}: Math.round((percentage ?? 0) * 100)
 #: src/session/components/note-input/transcript/screens/empty.tsx
 msgid "{0}% complete"
@@ -142,11 +147,6 @@ msgstr "{trialDaysRemaining} day left"
 #: src/settings/general/billing.tsx
 msgid "{trialDaysRemaining} days left"
 msgstr "{trialDaysRemaining} days left"
-
-#. placeholder {0}: devices.maxDevices
-#: src/settings/general/billing.tsx
-msgid "{used} of {0} used"
-msgstr "{used} of {0} used"
 
 #: src/settings/stats/badge-collection.tsx
 msgid "{value} / {target} active weeks"
@@ -285,6 +285,7 @@ msgstr "Access updated."
 
 #: src/onboarding/permissions.tsx
 #: src/settings/general/permissions.tsx
+#: src/sidebar/settings-nav-groups.ts
 msgid "Accessibility"
 msgstr "Accessibility"
 
@@ -329,6 +330,7 @@ msgstr "Activity over the past year"
 #: src/contacts/shared.tsx
 #: src/resource-sharing/share-dialog.tsx
 #: src/settings/dictionary/index.tsx
+#: src/settings/dictionary/replacements.tsx
 #: src/settings/todo/github.tsx
 #: src/sidebar/toast/registry.tsx
 msgid "Add"
@@ -348,6 +350,10 @@ msgstr "Add {0} account"
 #: src/settings/ai/stt/select.tsx
 msgid "Add {0} in System Settings > General > Language & Region to transcribe with {model}, or choose another model."
 msgstr "Add {0} in System Settings > General > Language & Region to transcribe with {model}, or choose another model."
+
+#: src/settings/dictionary/replacements.tsx
+msgid "Add {term}"
+msgstr "Add {term}"
 
 #: src/resource-sharing/library.tsx
 msgid "Add a copy"
@@ -377,6 +383,10 @@ msgstr "Add a trigger, then stack actions like Zapier."
 msgid "Add an action"
 msgstr "Add an action"
 
+#: src/settings/general/camera-watermark.tsx
+msgid "Add Anarlog Camera to macOS"
+msgstr "Add Anarlog Camera to macOS"
+
 #: src/settings/automations/index.tsx
 msgid "Add and configure at least one action first."
 msgstr "Add and configure at least one action first."
@@ -400,6 +410,10 @@ msgstr "Add at least one configured action before enabling."
 #: src/templates/auto-format-examples-dialog.tsx
 msgid "Add at least one example summary."
 msgstr "Add at least one example summary."
+
+#: src/settings/general/camera-watermark.tsx
+msgid "Add camera"
+msgstr "Add camera"
 
 #: src/session/folder-instructions.tsx
 msgid "Add context for this folder"
@@ -438,6 +452,7 @@ msgid "Add members"
 msgstr "Add members"
 
 #: src/settings/dictionary/index.tsx
+#: src/sidebar/settings-nav-groups.ts
 msgid "Add names, jargon, or product terms to prefer"
 msgstr "Add names, jargon, or product terms to prefer"
 
@@ -451,6 +466,7 @@ msgstr "Add organization"
 
 #: src/billing/trial-payment-reminder-dialog.tsx
 #: src/settings/general/billing.tsx
+#: src/sidebar/settings-nav-groups.ts
 msgid "Add payment method"
 msgstr "Add payment method"
 
@@ -482,7 +498,12 @@ msgstr "Add to folder"
 msgid "Add webhook"
 msgstr "Add webhook"
 
+#: src/settings/general/camera-watermark.tsx
+msgid "Adding…"
+msgstr "Adding…"
+
 #: src/settings/general/spoken-languages.tsx
+#: src/sidebar/settings-nav-groups.ts
 msgid "Additional spoken languages"
 msgstr "Additional spoken languages"
 
@@ -509,6 +530,7 @@ msgid "After the meeting summary is ready"
 msgstr "After the meeting summary is ready"
 
 #: src/settings/developers/skills.tsx
+#: src/sidebar/settings-nav-groups.ts
 msgid "Agent skills"
 msgstr "Agent skills"
 
@@ -544,6 +566,10 @@ msgstr "All time"
 msgid "Allow anyone-with-the-link sharing"
 msgstr "Allow anyone-with-the-link sharing"
 
+#: src/settings/general/camera-watermark.tsx
+msgid "Allow camera"
+msgstr "Allow camera"
+
 #: src/settings/team/index.tsx
 msgid "Allow public indexing"
 msgstr "Allow public indexing"
@@ -578,6 +604,18 @@ msgstr "Anarlog {0} is available"
 msgid "Anarlog {0} is ready to install"
 msgstr "Anarlog {0} is ready to install"
 
+#: src/settings/general/camera-watermark.tsx
+msgid "Anarlog Camera"
+msgstr "Anarlog Camera"
+
+#: src/services/camera-guidance.tsx
+msgid "Anarlog Camera is hiding your room now. Turn off {app}'s blur or background: it hides the badge."
+msgstr "Anarlog Camera is hiding your room now. Turn off {app}'s blur or background: it hides the badge."
+
+#: src/settings/general/camera-watermark.tsx
+msgid "Anarlog Camera needs your camera to show you."
+msgstr "Anarlog Camera needs your camera to show you."
+
 #: src/onboarding/permissions.tsx
 msgid "Anarlog can hear others"
 msgstr "Anarlog can hear others"
@@ -591,6 +629,7 @@ msgid "Anarlog can read meeting details"
 msgstr "Anarlog can read meeting details"
 
 #: src/settings/developers/cli.tsx
+#: src/sidebar/settings-nav-groups.ts
 msgid "Anarlog CLI"
 msgstr "Anarlog CLI"
 
@@ -617,6 +656,10 @@ msgstr "Anarlog couldn't sign you out. Try again."
 #: src/lock/gate.tsx
 msgid "Anarlog is Locked"
 msgstr "Anarlog is Locked"
+
+#: src/services/camera-guidance.tsx
+msgid "Anarlog left {app}'s blur or background on because it couldn't confirm Anarlog Camera hides your room yet."
+msgstr "Anarlog left {app}'s blur or background on because it couldn't confirm Anarlog Camera hides your room yet."
 
 #: src/session-sharing/access-management.tsx
 msgid "Anarlog member"
@@ -678,6 +721,7 @@ msgid "Anyone with the link can view. Link copied."
 msgstr "Anyone with the link can view. Link copied."
 
 #: src/settings/ai/shared/index.tsx
+#: src/sidebar/settings-nav-groups.ts
 msgid "API Key"
 msgstr "API Key"
 
@@ -690,6 +734,7 @@ msgid "App"
 msgstr "App"
 
 #: src/settings/appearance/app-icon.tsx
+#: src/sidebar/settings-nav-groups.ts
 msgid "App icon"
 msgstr "App icon"
 
@@ -730,6 +775,10 @@ msgstr "Apply to summary"
 msgid "Approve"
 msgstr "Approve"
 
+#: src/settings/general/camera-watermark.tsx
+msgid "Approve Anarlog Camera in System Settings under Login Items & Extensions."
+msgstr "Approve Anarlog Camera in System Settings under Login Items & Extensions."
+
 #: src/composer/index.tsx
 msgid "Ask Anarlog AI anything"
 msgstr "Ask Anarlog AI anything"
@@ -743,10 +792,6 @@ msgstr "Ask Anarlog anything"
 msgid "Ask anything"
 msgstr "Ask anything"
 
-#: src/settings/general/notification.tsx
-msgid "Ask before stopping when a meeting may have ended. When alerts are off, Anarlog keeps listening."
-msgstr "Ask before stopping when a meeting may have ended. When alerts are off, Anarlog keeps listening."
-
 #: src/settings/general/primary-recording-device.tsx
 msgid "Ask each meeting"
 msgstr "Ask each meeting"
@@ -754,10 +799,6 @@ msgstr "Ask each meeting"
 #: src/task/resource-view.tsx
 msgid "Assignees:"
 msgstr "Assignees:"
-
-#: src/settings/general/billing.tsx
-msgid "At your device limit"
-msgstr "At your device limit"
 
 #: src/templates/auto-format-examples-dialog.tsx
 msgid "Attach Markdown or text"
@@ -781,6 +822,7 @@ msgid "Audio available"
 msgstr "Audio available"
 
 #: src/settings/general/audio-settings.tsx
+#: src/sidebar/settings-nav-groups.ts
 msgid "Audio file retention"
 msgstr "Audio file retention"
 
@@ -817,6 +859,7 @@ msgid "Automate what happens before, during, or after meetings based on the cond
 msgstr "Automate what happens before, during, or after meetings based on the conditions you choose."
 
 #: src/settings/general/app-settings.tsx
+#: src/sidebar/settings-nav-groups.ts
 msgid "Automatically install updates"
 msgstr "Automatically install updates"
 
@@ -870,6 +913,10 @@ msgstr "Average across the capture days counted above."
 msgid "Back"
 msgstr "Back"
 
+#: src/settings/general/camera-watermark.tsx
+msgid "Background"
+msgstr "Background"
+
 #: src/settings/ai/shared/index.tsx
 msgid "Base URL"
 msgstr "Base URL"
@@ -907,7 +954,12 @@ msgstr "Bloom"
 msgid "Blueprint"
 msgstr "Blueprint"
 
+#: src/settings/general/camera-watermark.tsx
+msgid "Blur"
+msgstr "Blur"
+
 #: src/settings/general/notification.tsx
+#: src/sidebar/settings-nav-groups.ts
 msgid "Bounce app icon"
 msgstr "Bounce app icon"
 
@@ -922,10 +974,6 @@ msgstr "Bring your meeting history"
 #: src/instruction/index.tsx
 msgid "Browser handoff not working? Paste the callback link instead"
 msgstr "Browser handoff not working? Paste the callback link instead"
-
-#: src/settings/general/audio-settings.tsx
-msgid "Build voiceprints from meeting audio so speakers you name in a transcript are recognized in later meetings. Voiceprints never leave this device, and unnamed ones are deleted after 45 days."
-msgstr "Build voiceprints from meeting audio so speakers you name in a transcript are recognized in later meetings. Voiceprints never leave this device, and unnamed ones are deleted after 45 days."
 
 #: src/settings/stats/insights.tsx
 msgid "Busiest day"
@@ -947,6 +995,14 @@ msgstr "Calendar connected"
 #: src/settings/team/index.tsx
 msgid "Calendar-scheduled capture jobs. Canceling stops the bot from joining."
 msgstr "Calendar-scheduled capture jobs. Canceling stops the bot from joining."
+
+#: src/settings/general/camera-watermark.tsx
+msgid "Camera"
+msgstr "Camera"
+
+#: src/settings/general/camera-watermark.tsx
+msgid "Camera access"
+msgstr "Camera access"
 
 #: src/session-sharing/access-management.tsx
 msgid "Can comment"
@@ -1041,10 +1097,12 @@ msgid "Capture conversations in 4 different weeks. They don't need to be consecu
 msgstr "Capture conversations in 4 different weeks. They don't need to be consecutive."
 
 #: src/settings/general/meeting-settings.tsx
+#: src/sidebar/settings-nav-groups.ts
 msgid "Capture meeting chat in Memos"
 msgstr "Capture meeting chat in Memos"
 
 #: src/settings/general/meeting-settings.tsx
+#: src/sidebar/settings-nav-groups.ts
 msgid "Capture shared screens in Memos"
 msgstr "Capture shared screens in Memos"
 
@@ -1078,13 +1136,13 @@ msgstr "Change workspace logo"
 msgid "Changes stay on this device until you resume sync."
 msgstr "Changes stay on this device until you resume sync."
 
+#: src/dictation/recovery.tsx
+msgid "Chat"
+msgstr "Chat"
+
 #: src/chat/components/toolbar-controls.tsx
 msgid "Chat history"
 msgstr "Chat history"
-
-#: src/chat/components/input/use-dictation.ts
-msgid "Check microphone permission and the selected input device, then try again."
-msgstr "Check microphone permission and the selected input device, then try again."
 
 #: src/settings/team/index.tsx
 msgid "Checking availability…"
@@ -1138,8 +1196,8 @@ msgid "Choose a device"
 msgstr "Choose a device"
 
 #: src/settings/sync/index.tsx
-msgid "Choose a device below to replace, or add more device slots to your plan. This device will continue automatically."
-msgstr "Choose a device below to replace, or add more device slots to your plan. This device will continue automatically."
+msgid "Choose a device below to replace. This device will continue automatically."
+msgstr "Choose a device below to replace. This device will continue automatically."
 
 #: src/session/components/outer-header/overflow/export-modal.tsx
 msgid "Choose a file format and what to include."
@@ -1206,10 +1264,6 @@ msgstr "Choose custom color"
 msgid "Choose export folder"
 msgstr "Choose export folder"
 
-#: src/settings/appearance/sidebar-item-fields.tsx
-msgid "Choose extra fields to show on each note."
-msgstr "Choose extra fields to show on each note."
-
 #: src/imports/screen.tsx
 msgid "Choose files"
 msgstr "Choose files"
@@ -1223,46 +1277,21 @@ msgstr "Choose folder"
 msgid "Choose folder icon"
 msgstr "Choose folder icon"
 
-#: src/settings/general/notification.tsx
-msgid "Choose from five completion sounds."
-msgstr "Choose from five completion sounds."
-
 #: src/settings/automations/google-drive-config.tsx
 msgid "Choose Google Drive folder"
 msgstr "Choose Google Drive folder"
-
-#: src/settings/appearance/app-icon.tsx
-msgid "Choose how Anarlog appears in the Dock."
-msgstr "Choose how Anarlog appears in the Dock."
-
-#: src/settings/appearance/theme.tsx
-msgid "Choose how Anarlog looks on this device."
-msgstr "Choose how Anarlog looks on this device."
 
 #: src/templates/auto-form.tsx
 msgid "Choose how Auto structures and styles your summaries."
 msgstr "Choose how Auto structures and styles your summaries."
 
-#: src/settings/general/audio-settings.tsx
+#: src/sidebar/settings-nav-groups.ts
 msgid "Choose how long recordings stay on this device."
 msgstr "Choose how long recordings stay on this device."
 
 #: src/templates/template-icon-picker.tsx
 msgid "Choose template icon"
 msgstr "Choose template icon"
-
-#: src/settings/dictation.tsx
-#: src/settings/general/audio-settings.tsx
-msgid "Choose the microphone that captures your voice."
-msgstr "Choose the microphone that captures your voice."
-
-#: src/settings/general/week-start.tsx
-msgid "Choose which day begins your calendar week."
-msgstr "Choose which day begins your calendar week."
-
-#: src/settings/general/default-share-access.tsx
-msgid "Choose who can access notes from new meetings."
-msgstr "Choose who can access notes from new meetings."
 
 #: src/settings/team/index.tsx
 msgid "Claim email domain"
@@ -1271,6 +1300,10 @@ msgstr "Claim email domain"
 #: src/settings/general/storage/legacy-cleanup.tsx
 msgid "Clean Up"
 msgstr "Clean Up"
+
+#: src/settings/dictation-engine.tsx
+msgid "Clean up dictation"
+msgstr "Clean up dictation"
 
 #: src/settings/general/storage/legacy-cleanup.tsx
 msgid "Clean up legacy files?"
@@ -1300,16 +1333,14 @@ msgid "Clear selection"
 msgstr "Clear selection"
 
 #: src/settings/developers/cli.tsx
+#: src/sidebar/settings-nav-groups.ts
 msgid "CLI & MCP"
 msgstr "CLI & MCP"
 
 #: src/settings/dictation.tsx
+#: src/sidebar/settings-nav-groups.ts
 msgid "Click here, then use your dictation shortcut."
 msgstr "Click here, then use your dictation shortcut."
-
-#: src/settings/dictation-shortcut.tsx
-msgid "Click the shortcut to record a new key combination. Press Escape to cancel."
-msgstr "Click the shortcut to record a new key combination. Press Escape to cancel."
 
 #: src/shared/ui/resource-list/preview-header.tsx
 msgid "Clone"
@@ -1336,6 +1367,7 @@ msgid "Closed"
 msgstr "Closed"
 
 #: src/settings/developers/cloud-api.tsx
+#: src/sidebar/settings-nav-groups.ts
 msgid "Cloud API & Connectors"
 msgstr "Cloud API & Connectors"
 
@@ -1360,6 +1392,7 @@ msgid "Cloud API key copied"
 msgstr "Cloud API key copied"
 
 #: src/settings/developers/cloud-api.tsx
+#: src/sidebar/settings-nav-groups.ts
 msgid "Cloud API keys"
 msgstr "Cloud API keys"
 
@@ -1368,10 +1401,12 @@ msgid "Cloud API URL copied"
 msgstr "Cloud API URL copied"
 
 #: src/settings/sync/index.tsx
+#: src/sidebar/settings-nav-groups.ts
 msgid "Cloud sync"
 msgstr "Cloud sync"
 
 #: src/settings/general/notification.tsx
+#: src/sidebar/settings-nav-groups.ts
 msgid "Cloud sync complete"
 msgstr "Cloud sync complete"
 
@@ -1475,6 +1510,7 @@ msgid "Complete sign-in in your browser, then return to Anarlog."
 msgstr "Complete sign-in in your browser, then return to Anarlog."
 
 #: src/settings/general/notification.tsx
+#: src/sidebar/settings-nav-groups.ts
 msgid "Completion sound"
 msgstr "Completion sound"
 
@@ -1492,6 +1528,7 @@ msgstr "Configure a chat model to use the quick composer."
 
 #: src/settings/ai/llm/configure.tsx
 #: src/settings/ai/stt/configure.tsx
+#: src/sidebar/settings-nav-groups.ts
 msgid "Configure Providers"
 msgstr "Configure Providers"
 
@@ -1591,6 +1628,7 @@ msgid "Connected"
 msgstr "Connected"
 
 #: src/settings/general/account.tsx
+#: src/sidebar/settings-nav-groups.ts
 msgid "Connected accounts"
 msgstr "Connected accounts"
 
@@ -1657,10 +1695,6 @@ msgstr "Continue to Pro checkout"
 msgid "Continuing without trial"
 msgstr "Continuing without trial"
 
-#: src/settings/general/meeting-settings.tsx
-msgid "Control listening without reopening Anarlog."
-msgstr "Control listening without reopening Anarlog."
-
 #: src/settings/stats/index.tsx
 msgid "Conversations"
 msgstr "Conversations"
@@ -1683,6 +1717,7 @@ msgstr "Conversations: {total}"
 msgid "Copied"
 msgstr "Copied"
 
+#: src/dictation/recovery.tsx
 #: src/main/windows-title-bar.tsx
 #: src/session/components/note-input/transcript/renderer/selection-menu.tsx
 #: src/settings/ai/llm/subscriptions/connect.tsx
@@ -1694,6 +1729,10 @@ msgstr "Copy"
 #: src/settings/developers/cloud-api.tsx
 msgid "Copy {label} URL"
 msgstr "Copy {label} URL"
+
+#: src/dictation/recovery.tsx
+msgid "Copy and remove"
+msgstr "Copy and remove"
 
 #: src/settings/developers/cli.tsx
 msgid "Copy config"
@@ -1801,6 +1840,14 @@ msgstr "Could not load Slack channels. Reconnect Slack and try again."
 #: src/settings/sync/log.tsx
 msgid "Could not load sync logs."
 msgstr "Could not load sync logs."
+
+#: src/settings/general/storage/data-location.tsx
+msgid "Could not load the data folder"
+msgstr "Could not load the data folder"
+
+#: src/settings/general/storage/data-location.tsx
+msgid "Could not load the notes database folder"
+msgstr "Could not load the notes database folder"
 
 #: src/settings/team/index.tsx
 msgid "Could not load workspace members."
@@ -1933,10 +1980,6 @@ msgstr "Couldn't load your profile. Reopen this page to try again."
 msgid "Couldn't open connected accounts. Try again."
 msgstr "Couldn't open connected accounts. Try again."
 
-#: src/settings/sync/index.tsx
-msgid "Couldn't open device add-ons. Try again."
-msgstr "Couldn't open device add-ons. Try again."
-
 #: src/auth/context.tsx
 #: src/settings/referrals.tsx
 msgid "Couldn't open sign-in. Try again."
@@ -2060,16 +2103,22 @@ msgid "Cut"
 msgstr "Cut"
 
 #: src/settings/stats/index.tsx
+#: src/sidebar/settings-nav-groups.ts
 msgid "Daily conversations"
 msgstr "Daily conversations"
 
 #: src/settings/appearance/theme.tsx
+#: src/sidebar/settings-nav-groups.ts
 msgid "Dark"
 msgstr "Dark"
 
 #: src/sidebar/settings-nav-groups.ts
 msgid "Data"
 msgstr "Data"
+
+#: src/settings/general/storage/data-location.tsx
+msgid "Data location"
+msgstr "Data location"
 
 #: src/settings/automations/markdown-export-options.tsx
 #: src/sidebar/note-filter-menu.tsx
@@ -2083,6 +2132,10 @@ msgstr "Date and time are required"
 #: src/settings/stats/date-range.tsx
 msgid "Date range"
 msgstr "Date range"
+
+#: src/settings/general/camera-watermark.tsx
+msgid "Daylight"
+msgstr "Daylight"
 
 #: src/edit/tab-content.tsx
 #: src/settings/team/index.tsx
@@ -2098,11 +2151,8 @@ msgstr "Default"
 msgid "Default access"
 msgstr "Default access"
 
-#: src/settings/general/main-language.tsx
-msgid "Default language for transcription and AI responses."
-msgstr "Default language for transcription and AI responses."
-
 #: src/settings/general/default-share-access.tsx
+#: src/sidebar/settings-nav-groups.ts
 msgid "Default sharing"
 msgstr "Default sharing"
 
@@ -2192,10 +2242,7 @@ msgid "Desktop edits published. Sharing resumed."
 msgstr "Desktop edits published. Sharing resumed."
 
 #: src/settings/general/notification.tsx
-msgid "Detect meetings from microphone activity."
-msgstr "Detect meetings from microphone activity."
-
-#: src/settings/general/notification.tsx
+#: src/sidebar/settings-nav-groups.ts
 msgid "Detection delay"
 msgstr "Detection delay"
 
@@ -2218,6 +2265,7 @@ msgstr "Device name"
 
 #: src/settings/sync/index.tsx
 #: src/settings/team/index.tsx
+#: src/sidebar/settings-nav-groups.ts
 msgid "Devices"
 msgstr "Devices"
 
@@ -2231,10 +2279,6 @@ msgid "Dictation shortcut"
 msgstr "Dictation shortcut"
 
 #: src/settings/dictation.tsx
-msgid "Dictation uses your microphone, transcription provider, languages, and dictionary. Temporary audio is deleted after transcription. Your last transcript stays in memory until dictation is disabled or Anarlog closes."
-msgstr "Dictation uses your microphone, transcription provider, languages, and dictionary. Temporary audio is deleted after transcription. Your last transcript stays in memory until dictation is disabled or Anarlog closes."
-
-#: src/settings/dictation.tsx
 #: src/settings/dictionary/index.tsx
 #: src/sidebar/settings-nav-groups.ts
 msgid "Dictionary"
@@ -2245,8 +2289,13 @@ msgid "Disable"
 msgstr "Disable"
 
 #: src/settings/general/notification.tsx
+#: src/sidebar/settings-nav-groups.ts
 msgid "Disable all notifications"
 msgstr "Disable all notifications"
+
+#: src/dictation/recovery.tsx
+msgid "Discard"
+msgstr "Discard"
 
 #: src/calendar/components/oauth/provider-content.tsx
 #: src/calendar/components/sidebar.tsx
@@ -2260,6 +2309,14 @@ msgstr "Disconnect"
 #: src/settings/todo/github.tsx
 msgid "Disconnect private repo access."
 msgstr "Disconnect private repo access."
+
+#: src/settings/dictionary/replacements.tsx
+msgid "Dismiss"
+msgstr "Dismiss"
+
+#: src/settings/dictionary/replacements.tsx
+msgid "Dismiss {term}"
+msgstr "Dismiss {term}"
 
 #: src/main/windows-title-bar.tsx
 #: src/settings/imports/index.tsx
@@ -2329,6 +2386,10 @@ msgstr "Duplicate"
 msgid "Duration"
 msgstr "Duration"
 
+#: src/settings/general/camera-watermark.tsx
+msgid "Dusk"
+msgstr "Dusk"
+
 #: src/templates/auto-format-examples-dialog.tsx
 msgid "Each example must be 12,000 characters or fewer."
 msgstr "Each example must be 12,000 characters or fewer."
@@ -2347,6 +2408,10 @@ msgstr "Edit"
 #: src/session/components/outer-header/metadata/date.tsx
 msgid "Edit date"
 msgstr "Edit date"
+
+#: src/settings/dictation-engine.tsx
+msgid "Edit selected text by voice"
+msgstr "Edit selected text by voice"
 
 #: src/crm/enrich-contact.tsx
 msgid "email"
@@ -2399,6 +2464,7 @@ msgid "Enable Cloud API & Connectors"
 msgstr "Enable Cloud API & Connectors"
 
 #: src/settings/dictation.tsx
+#: src/sidebar/settings-nav-groups.ts
 msgid "Enable dictation"
 msgstr "Enable dictation"
 
@@ -2470,15 +2536,12 @@ msgstr "Enter your API key (optional)"
 msgid "Enter your saved recovery key when another approved device is unavailable."
 msgstr "Enter your saved recovery key when another approved device is unavailable."
 
-#: src/settings/privacy/index.tsx
-msgid "Error"
-msgstr "Error"
-
 #: src/composer/index.tsx
 msgid "Esc to dismiss"
 msgstr "Esc to dismiss"
 
 #: src/settings/general/notification.tsx
+#: src/sidebar/settings-nav-groups.ts
 msgid "Event notifications"
 msgstr "Event notifications"
 
@@ -2527,6 +2590,7 @@ msgid "Examples must be Markdown or plain text files."
 msgstr "Examples must be Markdown or plain text files."
 
 #: src/settings/general/notification.tsx
+#: src/sidebar/settings-nav-groups.ts
 msgid "Exclude apps from detection"
 msgstr "Exclude apps from detection"
 
@@ -2548,6 +2612,7 @@ msgid "Export folder"
 msgstr "Export folder"
 
 #: src/settings/general/storage/export-location.tsx
+#: src/sidebar/settings-nav-groups.ts
 msgid "Export location"
 msgstr "Export location"
 
@@ -2629,7 +2694,6 @@ msgstr "Finding Your Rhythm"
 msgid "Finish checkout in your browser to unlock more, then return to Anarlog."
 msgstr "Finish checkout in your browser to unlock more, then return to Anarlog."
 
-#: src/settings/general/account.tsx
 #: src/settings/referrals.tsx
 msgid "Finish in your browser, then return to Anarlog."
 msgstr "Finish in your browser, then return to Anarlog."
@@ -2660,6 +2724,7 @@ msgstr "Fn / Globe"
 
 #: src/settings/appearance/sidebar-item-fields.tsx
 #: src/sidebar/note-filter-menu.tsx
+#: src/sidebar/settings-nav-groups.ts
 msgid "Folder"
 msgstr "Folder"
 
@@ -2705,6 +2770,7 @@ msgid "Free"
 msgstr "Free"
 
 #: src/settings/referrals.tsx
+#: src/sidebar/settings-nav-groups.ts
 msgid "Free months earned"
 msgstr "Free months earned"
 
@@ -2751,10 +2817,6 @@ msgstr "Generating title..."
 msgid "Generating transcript..."
 msgstr "Generating transcript..."
 
-#: src/settings/sync/index.tsx
-msgid "Get more slots"
-msgstr "Get more slots"
-
 #: src/settings/referrals.tsx
 msgid "Get one free month when a friend signs up through your link and starts their free trial. Invite up to 3 friends. Each friend gets 30 days of Pro free."
 msgstr "Get one free month when a friend signs up through your link and starts their free trial. Invite up to 3 friends. Each friend gets 30 days of Pro free."
@@ -2769,10 +2831,6 @@ msgstr "Get Pro"
 #: src/sidebar/automations.tsx
 msgid "Get started"
 msgstr "Get started"
-
-#: src/settings/general/notification.tsx
-msgid "Get your attention when a summary is ready in the background."
-msgstr "Get your attention when a summary is ready in the background."
 
 #: src/sidebar/timeline/index.tsx
 msgid "Go back to now"
@@ -2845,12 +2903,9 @@ msgid "Guide"
 msgstr "Guide"
 
 #: src/settings/dictation.tsx
+#: src/sidebar/settings-nav-groups.ts
 msgid "Hands-free dictation"
 msgstr "Hands-free dictation"
-
-#: src/settings/general/app-settings.tsx
-msgid "Have Anarlog ready when you sign in."
-msgstr "Have Anarlog ready when you sign in."
 
 #: src/calendar/components/apple/permission.tsx
 msgid "Having trouble?"
@@ -2880,17 +2935,9 @@ msgstr "Help Anarlog listen to you"
 msgid "Help Anarlog read meeting activity"
 msgstr "Help Anarlog read meeting activity"
 
-#: src/settings/general/app-settings.tsx
-msgid "Help improve Anarlog with anonymous usage data."
-msgstr "Help improve Anarlog with anonymous usage data."
-
 #: src/chat/components/body/empty.tsx
 msgid "Hi, I'm Anarlog AI. Set up a language model and I'll be ready to help."
 msgstr "Hi, I'm Anarlog AI. Set up a language model and I'll be ready to help."
-
-#: src/settings/general/notification.tsx
-msgid "Hide all notification panels, Dock alerts, and completion sounds."
-msgstr "Hide all notification panels, Dock alerts, and completion sounds."
 
 #: src/sidebar/timeline/index.tsx
 msgid "Hide Deleted Events"
@@ -2926,11 +2973,8 @@ msgstr "History"
 msgid "History {0}/{1}"
 msgstr "History {0}/{1}"
 
-#: src/settings/dictation.tsx
-msgid "Hold your shortcut while speaking, then release it to finish."
-msgstr "Hold your shortcut while speaking, then release it to finish."
-
 #: src/settings/stats/index.tsx
+#: src/sidebar/settings-nav-groups.ts
 msgid "Hours transcribed"
 msgstr "Hours transcribed"
 
@@ -2953,6 +2997,10 @@ msgstr "I saved it"
 #: src/templates/template-icon-picker.tsx
 msgid "Icons"
 msgstr "Icons"
+
+#: src/services/camera-guidance.tsx
+msgid "If {app} blurs or replaces your background, that hides the badge. Keep it on until Anarlog Camera hides your room, then check your video before turning off {app}'s background."
+msgstr "If {app} blurs or replaces your background, that hides the badge. Keep it on until Anarlog Camera hides your room, then check your video before turning off {app}'s background."
 
 #: src/settings/general/account.tsx
 msgid "If Anarlog stays closed, paste the link in the sign-in window."
@@ -3151,6 +3199,7 @@ msgid "Join & record"
 msgstr "Join & record"
 
 #: src/settings/team/email-auto-join.tsx
+#: src/sidebar/settings-nav-groups.ts
 msgid "Join automatically with a work email"
 msgstr "Join automatically with a work email"
 
@@ -3163,6 +3212,7 @@ msgid "Join our community and stay updated:"
 msgstr "Join our community and stay updated:"
 
 #: src/settings/general/meeting-settings.tsx
+#: src/sidebar/settings-nav-groups.ts
 msgid "Join scheduled meetings"
 msgstr "Join scheduled meetings"
 
@@ -3174,10 +3224,6 @@ msgstr "Joined {0}"
 #: src/onboarding/account/after-login.tsx
 msgid "Keep {PRO_TRIAL_DAYS} days"
 msgstr "Keep {PRO_TRIAL_DAYS} days"
-
-#: src/settings/dictation.tsx
-msgid "Keep Anarlog running to use your shortcut in other apps."
-msgstr "Keep Anarlog running to use your shortcut in other apps."
 
 #: src/session-sharing/management-panel.tsx
 msgid "Keep desktop edits"
@@ -3199,6 +3245,10 @@ msgstr "Keep notes encrypted and synced across your devices."
 msgid "Keep this version"
 msgstr "Keep this version"
 
+#: src/settings/dictation-engine.tsx
+msgid "Keep unsent dictations"
+msgstr "Keep unsent dictations"
+
 #: src/auth/connect-local-library-dialog.tsx
 msgid "Keep using locally"
 msgstr "Keep using locally"
@@ -3206,6 +3256,10 @@ msgstr "Keep using locally"
 #: src/settings/sync/index.tsx
 msgid "Keep your recovery key saved somewhere safe. You can still use it if another synced device is unavailable."
 msgstr "Keep your recovery key saved somewhere safe. You can still use it if another synced device is unavailable."
+
+#: src/dictation/recovery.tsx
+msgid "Kept on this device for 24 hours. Anarlog never inserts these by itself."
+msgstr "Kept on this device for 24 hours. Anarlog never inserts these by itself."
 
 #: src/settings/developers/cloud-api.tsx
 msgid "Key name (e.g. Claude Code)"
@@ -3216,6 +3270,7 @@ msgid "Kimi Code API key"
 msgstr "Kimi Code API key"
 
 #: src/settings/general/index.tsx
+#: src/sidebar/settings-nav-groups.ts
 msgid "Language & Region"
 msgstr "Language & Region"
 
@@ -3233,6 +3288,7 @@ msgid "Last delivery {0}"
 msgstr "Last delivery {0}"
 
 #: src/settings/dictation.tsx
+#: src/sidebar/settings-nav-groups.ts
 msgid "Last dictation"
 msgstr "Last dictation"
 
@@ -3269,6 +3325,10 @@ msgstr "Last synced {0}"
 msgid "Last used {0}"
 msgstr "Last used {0}"
 
+#: src/settings/dictation-engine.tsx
+msgid "Learn from your corrections"
+msgstr "Learn from your corrections"
+
 #: src/chat/components/message/error.tsx
 msgid "Learn how to fix this"
 msgstr "Learn how to fix this"
@@ -3302,6 +3362,7 @@ msgid "Library connected, but sync could not restart. Try again in sync settings
 msgstr "Library connected, but sync could not restart. Try again in sync settings."
 
 #: src/settings/appearance/theme.tsx
+#: src/sidebar/settings-nav-groups.ts
 msgid "Light"
 msgstr "Light"
 
@@ -3344,6 +3405,7 @@ msgid "Live"
 msgstr "Live"
 
 #: src/settings/dictation.tsx
+#: src/sidebar/settings-nav-groups.ts
 msgid "Live transcript preview"
 msgstr "Live transcript preview"
 
@@ -3425,6 +3487,7 @@ msgid "Loading..."
 msgstr "Loading..."
 
 #: src/settings/privacy/index.tsx
+#: src/sidebar/settings-nav-groups.ts
 msgid "Lock app"
 msgstr "Lock app"
 
@@ -3445,6 +3508,14 @@ msgstr "Low"
 msgid "Low-light canvas"
 msgstr "Low-light canvas"
 
+#: src/settings/dictation-engine.tsx
+msgid "Lower other audio while dictating"
+msgstr "Lower other audio while dictating"
+
+#: src/settings/general/camera-watermark.tsx
+msgid "macOS asks you to approve the camera once."
+msgstr "macOS asks you to approve the camera once."
+
 #: src/settings/ai/shared/index.tsx
 msgid "macOS cannot access your login Keychain. Repairing briefly locks it and asks for your Mac password before Anarlog retries this API key."
 msgstr "macOS cannot access your login Keychain. Repairing briefly locks it and asks for your Mac password before Anarlog retries this API key."
@@ -3454,7 +3525,12 @@ msgstr "macOS cannot access your login Keychain. Repairing briefly locks it and 
 msgid "macOS could not access your recovery key. Repair Keychain access, then resume sync."
 msgstr "macOS could not access your recovery key. Repair Keychain access, then resume sync."
 
+#: src/settings/general/camera-watermark.tsx
+msgid "macOS couldn't add the camera: {extensionFailure}"
+msgstr "macOS couldn't add the camera: {extensionFailure}"
+
 #: src/settings/general/main-language.tsx
+#: src/sidebar/settings-nav-groups.ts
 msgid "Main language"
 msgstr "Main language"
 
@@ -3475,6 +3551,7 @@ msgid "Make the summary shorter."
 msgstr "Make the summary shorter."
 
 #: src/settings/general/billing.tsx
+#: src/sidebar/settings-nav-groups.ts
 msgid "Manage billing"
 msgstr "Manage billing"
 
@@ -3483,16 +3560,13 @@ msgid "Manage or cancel your subscription in the billing portal."
 msgstr "Manage or cancel your subscription in the billing portal."
 
 #: src/settings/general/account.tsx
+#: src/sidebar/settings-nav-groups.ts
 msgid "Manage sign-in methods"
 msgstr "Manage sign-in methods"
 
 #: src/settings/team/index.tsx
 msgid "Manage workspace billing"
 msgstr "Manage workspace billing"
-
-#: src/settings/general/account.tsx
-msgid "Manage your sign-in methods on the Anarlog website."
-msgstr "Manage your sign-in methods on the Anarlog website."
 
 #: src/settings/automations/google-drive-config.tsx
 msgid "Markdown (.md)"
@@ -3536,6 +3610,7 @@ msgid "MCP configuration copied"
 msgstr "MCP configuration copied"
 
 #: src/settings/developers/cli.tsx
+#: src/sidebar/settings-nav-groups.ts
 msgid "MCP server"
 msgstr "MCP server"
 
@@ -3611,12 +3686,9 @@ msgid "members"
 msgstr "members"
 
 #: src/settings/team/index.tsx
+#: src/sidebar/settings-nav-groups.ts
 msgid "Members"
 msgstr "Members"
-
-#: src/settings/team/index.tsx
-msgid "Members on a claimed email domain must sign in with SSO instead of Google, GitHub, or email."
-msgstr "Members on a claimed email domain must sign in with SSO instead of Google, GitHub, or email."
 
 #: src/edit/tab-content.tsx
 #: src/session/components/outer-header/overflow/export-modal.tsx
@@ -3652,6 +3724,7 @@ msgstr "Metadata"
 #: src/settings/dictation.tsx
 #: src/settings/general/audio-settings.tsx
 #: src/settings/general/permissions.tsx
+#: src/sidebar/settings-nav-groups.ts
 msgid "Microphone"
 msgstr "Microphone"
 
@@ -3660,6 +3733,7 @@ msgid "Microphone access turned on"
 msgstr "Microphone access turned on"
 
 #: src/settings/general/notification.tsx
+#: src/sidebar/settings-nav-groups.ts
 msgid "Microphone detection"
 msgstr "Microphone detection"
 
@@ -3756,6 +3830,14 @@ msgstr "Need more time? Refer a friend."
 #: src/settings/automations/workflow-builder.tsx
 msgid "Needs setup"
 msgstr "Needs setup"
+
+#: src/settings/dictation-engine.tsx
+msgid "Never read these apps"
+msgstr "Never read these apps"
+
+#: src/settings/dictation-engine.tsx
+msgid "Never read these websites"
+msgstr "Never read these websites"
 
 #: src/sidebar/automations.tsx
 msgid "New automation"
@@ -3994,6 +4076,10 @@ msgstr "No single busiest day"
 msgid "No speech detected"
 msgstr "No speech detected"
 
+#: src/dictation/recovery.tsx
+msgid "No speech was detected in this recording."
+msgstr "No speech was detected in this recording."
+
 #: src/settings/sync/log.tsx
 msgid "No sync activity yet."
 msgstr "No sync activity yet."
@@ -4014,6 +4100,10 @@ msgstr "No transcript available"
 msgid "No upcoming bots."
 msgstr "No upcoming bots."
 
+#: src/settings/general/camera-watermark.tsx
+msgid "None"
+msgstr "None"
+
 #: src/settings/stats/insights.tsx
 msgid "Not available"
 msgstr "Not available"
@@ -4022,6 +4112,10 @@ msgstr "Not available"
 #: src/settings/crm/index.tsx
 msgid "Not connected"
 msgstr "Not connected"
+
+#: src/settings/general/camera-watermark.tsx
+msgid "Not included in this build."
+msgstr "Not included in this build."
 
 #: src/settings/developers/cli.tsx
 msgid "Not installed"
@@ -4064,7 +4158,12 @@ msgstr "notes"
 msgid "Notes"
 msgstr "Notes"
 
+#: src/settings/general/storage/data-location.tsx
+msgid "Notes database"
+msgstr "Notes database"
+
 #: src/settings/appearance/sidebar-item-fields.tsx
+#: src/sidebar/settings-nav-groups.ts
 msgid "Notes list"
 msgstr "Notes list"
 
@@ -4106,10 +4205,6 @@ msgstr "Older files that differ from your current data were kept as recovery cop
 msgid "Oldest"
 msgstr "Oldest"
 
-#: src/settings/dictation.tsx
-msgid "On Wayland, approve the shortcuts in your desktop's prompt. Use Control + Alt + Escape to cancel. On X11, press Escape to cancel. The target app must expose an editable accessibility field."
-msgstr "On Wayland, approve the shortcuts in your desktop's prompt. Use Control + Alt + Escape to cancel. On X11, press Escape to cancel. The target app must expose an editable accessibility field."
-
 #: src/session/components/note-input/enhanced/streaming.tsx
 msgid "On-device models can take a few minutes to warm up before text appears."
 msgstr "On-device models can take a few minutes to warm up before text appears."
@@ -4117,6 +4212,14 @@ msgstr "On-device models can take a few minutes to warm up before text appears."
 #: src/settings/general/billing.tsx
 msgid "On-device transcription, recordings, and your own keys."
 msgstr "On-device transcription, recordings, and your own keys."
+
+#: src/settings/dictation-engine.tsx
+msgid "One app name or bundle ID per line"
+msgstr "One app name or bundle ID per line"
+
+#: src/settings/dictation-engine.tsx
+msgid "One domain per line, like bank.example"
+msgstr "One domain per line, like bank.example"
 
 #: src/folders/folder-editor.tsx
 #: src/settings/general/default-share-access.tsx
@@ -4159,10 +4262,6 @@ msgstr "Open AI Settings"
 msgid "Open Anarlog"
 msgstr "Open Anarlog"
 
-#: src/settings/general/app-settings.tsx
-msgid "Open Anarlog from the menu bar."
-msgstr "Open Anarlog from the menu bar."
-
 #: src/settings/sync/index.tsx
 msgid "Open Anarlog on an existing synced device signed in to the same account. This device will connect automatically."
 msgstr "Open Anarlog on an existing synced device signed in to the same account. This device will connect automatically."
@@ -4183,6 +4282,10 @@ msgstr "Open exported file in Google Drive"
 #: src/session/components/outer-header/overflow/index.tsx
 msgid "Open floating panel"
 msgstr "Open floating panel"
+
+#: src/settings/general/storage/data-location.tsx
+msgid "Open folder"
+msgstr "Open folder"
 
 #: src/session/components/outer-header/overflow/index.tsx
 #: src/sidebar/timeline/item.tsx
@@ -4213,14 +4316,14 @@ msgstr "Open repository on GitHub"
 msgid "Open Settings"
 msgstr "Open Settings"
 
+#: src/settings/general/camera-watermark.tsx
+msgid "Open System Settings"
+msgstr "Open System Settings"
+
 #: src/resource-sharing/share-dialog.tsx
 #: src/settings/general/billing.tsx
 msgid "Open Teams"
 msgstr "Open Teams"
-
-#: src/settings/general/meeting-settings.tsx
-msgid "Open the meeting link when a scheduled meeting begins."
-msgstr "Open the meeting link when a scheduled meeting begins."
 
 #: src/session-sharing/management-panel.tsx
 msgid "Open web copy"
@@ -4273,6 +4376,10 @@ msgstr "Organization name"
 #: src/settings/referrals.tsx
 msgid "Original offer: {amount} off your subscription after your friend's first payment."
 msgstr "Original offer: {amount} off your subscription after your friend's first payment."
+
+#: src/dictation/recovery.tsx
+msgid "Other apps"
+msgstr "Other apps"
 
 #: src/session/components/version-history-dialog.tsx
 msgid "Other device's version"
@@ -4330,10 +4437,6 @@ msgstr "Paste the localhost redirect URL"
 #: src/settings/developers/webhooks.tsx
 msgid "Pause"
 msgstr "Pause"
-
-#: src/settings/general/notification.tsx
-msgid "Pause alerts while Do Not Disturb is on."
-msgstr "Pause alerts while Do Not Disturb is on."
 
 #: src/settings/developers/webhooks.tsx
 msgid "Paused"
@@ -4400,6 +4503,10 @@ msgstr "phone"
 msgid "Phone"
 msgstr "Phone"
 
+#: src/services/camera-guidance.tsx
+msgid "Pick Anarlog Camera as your camera. Anarlog couldn't switch it in {app}."
+msgstr "Pick Anarlog Camera as your camera. Anarlog couldn't switch it in {app}."
+
 #: src/contacts/contact-page-header.tsx
 msgid "Pin"
 msgstr "Pin"
@@ -4411,10 +4518,6 @@ msgstr "Plan limits"
 #: src/settings/general/billing.tsx
 msgid "Plans"
 msgstr "Plans"
-
-#: src/settings/general/notification.tsx
-msgid "Play a sound when transcription, summaries, or cloud sync finish."
-msgstr "Play a sound when transcription, summaries, or cloud sync finish."
 
 #: src/session/components/note-input/transcript/renderer/selection-menu.tsx
 msgid "Play from here"
@@ -4433,6 +4536,7 @@ msgid "Post a recap to Slack"
 msgstr "Post a recap to Slack"
 
 #: src/settings/general/meeting-settings.tsx
+#: src/sidebar/settings-nav-groups.ts
 msgid "Post recording disclosure in meeting chat"
 msgstr "Post recording disclosure in meeting chat"
 
@@ -4444,14 +4548,6 @@ msgstr "Post the meeting summary to a channel you can access."
 msgid "Post to a channel"
 msgstr "Post to a channel"
 
-#: src/settings/general/primary-recording-device.tsx
-msgid "Prefer this device when multiple devices record the same meeting. Other devices can record when it is not recording."
-msgstr "Prefer this device when multiple devices record the same meeting. Other devices can record when it is not recording."
-
-#: src/settings/general/notification.tsx
-msgid "Prepare for events with a 5-minute reminder."
-msgstr "Prepare for events with a 5-minute reminder."
-
 #: src/session/components/outer-header/overflow/export-modal.tsx
 msgid "Preparing transcript..."
 msgstr "Preparing transcript..."
@@ -4460,21 +4556,9 @@ msgstr "Preparing transcript..."
 msgid "Preparing…"
 msgstr "Preparing…"
 
-#: src/settings/dictation.tsx
-msgid "Press Escape to cancel. Dictation stops after five minutes and pauses while Anarlog records a meeting."
-msgstr "Press Escape to cancel. Dictation stops after five minutes and pauses while Anarlog records a meeting."
-
 #: src/settings/dictation-shortcut.tsx
 msgid "Press shortcut…"
 msgstr "Press shortcut…"
-
-#: src/settings/dictation.tsx
-msgid "Press your shortcut to start, then press it again to finish."
-msgstr "Press your shortcut to start, then press it again to finish."
-
-#: src/settings/general/notification.tsx
-msgid "Prevent selected apps from triggering meeting detection."
-msgstr "Prevent selected apps from triggering meeting detection."
 
 #: src/settings/automations/index.tsx
 #: src/settings/general/notification.tsx
@@ -4502,6 +4586,7 @@ msgid "Primary owner"
 msgstr "Primary owner"
 
 #: src/settings/general/primary-recording-device.tsx
+#: src/sidebar/settings-nav-groups.ts
 msgid "Primary recording device"
 msgstr "Primary recording device"
 
@@ -4560,10 +4645,6 @@ msgstr "Re-transcription failed"
 #: src/onboarding/permissions.tsx
 msgid "Read meeting controls and visible chat"
 msgstr "Read meeting controls and visible chat"
-
-#: src/settings/general/permissions.tsx
-msgid "Read meeting controls and visible chat."
-msgstr "Read meeting controls and visible chat."
 
 #: src/settings/general/notification.tsx
 msgid "Ready"
@@ -4644,26 +4725,31 @@ msgstr "Reconnect required for {0} Calendar"
 msgid "Reconnect Slack"
 msgstr "Reconnect Slack"
 
+#: src/calendar/components/calendar-selection.tsx
+msgid "Reconnect your calendar account to resume syncing."
+msgstr "Reconnect your calendar account to resume syncing."
+
 #: src/session/components/outer-header/index.tsx
 msgid "Record"
 msgstr "Record"
-
-#: src/settings/general/permissions.tsx
-msgid "Record other participants in meetings."
-msgstr "Record other participants in meetings."
-
-#: src/settings/general/permissions.tsx
-msgid "Record your voice in meetings and calls."
-msgstr "Record your voice in meetings and calls."
 
 #: src/session/components/note-input/transcript/actions.ts
 #: src/session/components/outer-header/overflow/index.tsx
 msgid "Recording not found. It may have been deleted."
 msgstr "Recording not found. It may have been deleted."
 
+#: src/dictation/recovery.tsx
+msgid "Recording not transcribed yet."
+msgstr "Recording not transcribed yet."
+
 #: src/settings/general/notification.tsx
+#: src/sidebar/settings-nav-groups.ts
 msgid "Recording status prompts"
 msgstr "Recording status prompts"
+
+#: src/services/meeting-capture-stop.tsx
+msgid "Recording stopped"
+msgstr "Recording stopped"
 
 #: src/main/windows-title-bar.tsx
 msgid "Redo"
@@ -4702,6 +4788,7 @@ msgid "Related Notes"
 msgstr "Related Notes"
 
 #: src/settings/general/audio-settings.tsx
+#: src/sidebar/settings-nav-groups.ts
 msgid "Remember speakers"
 msgstr "Remember speakers"
 
@@ -4733,6 +4820,10 @@ msgstr "Remove {0}"
 #: src/settings/team/index.tsx
 msgid "Remove {0} from {workspaceName}? They will lose access to this workspace."
 msgstr "Remove {0} from {workspaceName}? They will lose access to this workspace."
+
+#: src/settings/dictionary/replacements.tsx
+msgid "Remove {from}"
+msgstr "Remove {from}"
 
 #: src/settings/dictionary/index.tsx
 msgid "Remove {term}"
@@ -4832,6 +4923,10 @@ msgstr "Replace repository"
 msgid "Replace with..."
 msgstr "Replace with..."
 
+#: src/settings/dictionary/replacements.tsx
+msgid "Replacements"
+msgstr "Replacements"
+
 #: src/main/windows-title-bar.tsx
 msgid "Report a Bug"
 msgstr "Report a Bug"
@@ -4867,14 +4962,6 @@ msgstr "Requested {0}"
 msgid "Require SSO"
 msgstr "Require SSO"
 
-#: src/settings/privacy/index.tsx
-msgid "Require Touch ID or your password when opening Anarlog."
-msgstr "Require Touch ID or your password when opening Anarlog."
-
-#: src/settings/privacy/index.tsx
-msgid "Require Windows Hello face, PIN, or password when opening Anarlog."
-msgstr "Require Windows Hello face, PIN, or password when opening Anarlog."
-
 #: src/shared/open-note-dialog.tsx
 #: src/sidebar/settings.tsx
 msgid "Requires Anarlog Pro"
@@ -4906,6 +4993,7 @@ msgid "Resolve the web and desktop edits before inviting anyone."
 msgstr "Resolve the web and desktop edits before inviting anyone."
 
 #: src/settings/general/notification.tsx
+#: src/sidebar/settings-nav-groups.ts
 msgid "Respect Do-Not-Disturb mode"
 msgstr "Respect Do-Not-Disturb mode"
 
@@ -5024,10 +5112,6 @@ msgstr "Save meeting summaries and transcripts to a Google Drive folder."
 msgid "Save meetings to Google Drive"
 msgstr "Save meetings to Google Drive"
 
-#: src/settings/general/storage/export-location.tsx
-msgid "Save PDF, text, Markdown, and Org exports to this folder."
-msgstr "Save PDF, text, Markdown, and Org exports to this folder."
-
 #: src/settings/team/index.tsx
 msgid "Save policies"
 msgstr "Save policies"
@@ -5035,10 +5119,6 @@ msgstr "Save policies"
 #: src/settings/team/index.tsx
 msgid "Save SCIM token"
 msgstr "Save SCIM token"
-
-#: src/settings/general/meeting-settings.tsx
-msgid "Save slides and screens others share in meetings. Requires Screen Recording."
-msgstr "Save slides and screens others share in meetings. Requires Screen Recording."
 
 #: src/settings/team/index.tsx
 msgid "Save subdomain"
@@ -5055,10 +5135,6 @@ msgstr "Save this key in a password manager. New devices can usually be approved
 #: src/settings/automations/workflow-builder.tsx
 msgid "Save to Google Drive"
 msgstr "Save to Google Drive"
-
-#: src/settings/general/meeting-settings.tsx
-msgid "Save visible chat from supported meetings using Accessibility."
-msgstr "Save visible chat from supported meetings using Accessibility."
 
 #: src/settings/ai/shared/index.tsx
 #: src/settings/general/account-profile.tsx
@@ -5247,7 +5323,7 @@ msgstr "Send email"
 msgid "Send message"
 msgstr "Send message"
 
-#: src/settings/privacy/index.tsx
+#: src/sidebar/settings-nav-groups.ts
 msgid "Send sanitized crash and error reports to help improve Anarlog."
 msgstr "Send sanitized crash and error reports to help improve Anarlog."
 
@@ -5335,6 +5411,10 @@ msgstr "Share a meeting recap in Slack"
 msgid "Share audio"
 msgstr "Share audio"
 
+#: src/settings/privacy/index.tsx
+msgid "Share error reports"
+msgstr "Share error reports"
+
 #: src/session-sharing/index.tsx
 #: src/session-sharing/management-panel.tsx
 msgid "Share link copied."
@@ -5361,6 +5441,7 @@ msgid "Share one item with a guest, or add it to a Team for everyone."
 msgstr "Share one item with a guest, or add it to a Team for everyone."
 
 #: src/settings/general/app-settings.tsx
+#: src/sidebar/settings-nav-groups.ts
 msgid "Share usage data"
 msgstr "Share usage data"
 
@@ -5434,16 +5515,9 @@ msgid "Show All Recurring Events"
 msgstr "Show All Recurring Events"
 
 #: src/settings/general/app-settings.tsx
-msgid "Show Anarlog in the Dock and app switcher."
-msgstr "Show Anarlog in the Dock and app switcher."
-
-#: src/settings/general/app-settings.tsx
+#: src/sidebar/settings-nav-groups.ts
 msgid "Show app in Dock"
 msgstr "Show app in Dock"
-
-#: src/settings/general/permissions.tsx
-msgid "Show Apple Calendar events in Anarlog."
-msgstr "Show Apple Calendar events in Anarlog."
 
 #: src/session/components/outer-header/overflow/index.tsx
 msgid "Show Audio in Explorer"
@@ -5466,6 +5540,7 @@ msgid "Show Event"
 msgstr "Show Event"
 
 #: src/settings/general/meeting-settings.tsx
+#: src/sidebar/settings-nav-groups.ts
 msgid "Show floating bar"
 msgstr "Show floating bar"
 
@@ -5480,11 +5555,8 @@ msgstr "Show in Finder"
 msgid "Show in folder"
 msgstr "Show in folder"
 
-#: src/settings/appearance/time-format.tsx
-msgid "Show meeting times as 14:00 instead of 2:00 PM."
-msgstr "Show meeting times as 14:00 instead of 2:00 PM."
-
 #: src/settings/general/app-settings.tsx
+#: src/sidebar/settings-nav-groups.ts
 msgid "Show release notes"
 msgstr "Show release notes"
 
@@ -5496,37 +5568,14 @@ msgstr "Show sidebar"
 msgid "Show Sidebar"
 msgstr "Show Sidebar"
 
-#: src/settings/appearance/sidebar-item-fields.tsx
-msgid "Show tags under the date and time."
-msgstr "Show tags under the date and time."
-
-#: src/settings/appearance/sidebar-item-fields.tsx
-msgid "Show the folder above the title."
-msgstr "Show the folder above the title."
-
-#: src/settings/general/timezone.tsx
-msgid "Show the timeline in your preferred timezone."
-msgstr "Show the timeline in your preferred timezone."
-
 #: src/sidebar/timeline/item.tsx
 msgid "Show This Event"
 msgstr "Show This Event"
 
 #: src/settings/general/app-settings.tsx
+#: src/sidebar/settings-nav-groups.ts
 msgid "Show tray icon"
 msgstr "Show tray icon"
-
-#: src/settings/general/notification.tsx
-msgid "Show when a summary is ready."
-msgstr "Show when a summary is ready."
-
-#: src/settings/general/notification.tsx
-msgid "Show when initial cloud sync finishes."
-msgstr "Show when initial cloud sync finishes."
-
-#: src/settings/dictation.tsx
-msgid "Show words in the floating panel as you speak. Uses a live connection to your selected transcription provider when supported. Text is inserted when you finish."
-msgstr "Show words in the floating panel as you speak. Uses a live connection to your selected transcription provider when supported. Text is inserted when you finish."
 
 #: src/resource-sharing/share-dialog.tsx
 #: src/session-sharing/index.tsx
@@ -5646,6 +5695,7 @@ msgid "Sign in with your Claude account. After you authorize, copy the code and 
 msgstr "Sign in with your Claude account. After you authorize, copy the code and we'll finish connecting."
 
 #: src/settings/general/account.tsx
+#: src/sidebar/settings-nav-groups.ts
 msgid "Sign out"
 msgstr "Sign out"
 
@@ -5711,6 +5761,10 @@ msgstr "Smileys & People"
 msgid "Software Engineer"
 msgstr "Software Engineer"
 
+#: src/calendar/components/calendar-selection.tsx
+msgid "Some calendars could not sync. Refresh to try again."
+msgstr "Some calendars could not sync. Refresh to try again."
+
 #: src/session/components/note-input/transcript/renderer/selection-menu.tsx
 #: src/shared/control.tsx
 msgid "Something went wrong"
@@ -5757,10 +5811,6 @@ msgstr "Source: OpenRouter or the AI model provider"
 msgid "Sparkle"
 msgstr "Sparkle"
 
-#: src/settings/dictation.tsx
-msgid "Speak into the focused text field in your apps. Your transcript appears when you finish."
-msgstr "Speak into the focused text field in your apps. Your transcript appears when you finish."
-
 #: src/settings/general/storage/legacy-cleanup.tsx
 msgid "SQLite migration verification is incomplete"
 msgstr "SQLite migration verification is incomplete"
@@ -5774,16 +5824,13 @@ msgid "Start a Pro trial or add your own LLM API key to generate a summary from 
 msgstr "Start a Pro trial or add your own LLM API key to generate a summary from this transcript."
 
 #: src/settings/general/app-settings.tsx
+#: src/sidebar/settings-nav-groups.ts
 msgid "Start Anarlog at login"
 msgstr "Start Anarlog at login"
 
 #: src/settings/general/billing.tsx
 msgid "Start free trial"
 msgstr "Start free trial"
-
-#: src/settings/general/meeting-settings.tsx
-msgid "Start listening when a scheduled meeting begins."
-msgstr "Start listening when a scheduled meeting begins."
 
 #: src/settings/team/index.tsx
 msgid "Start Pro"
@@ -5802,6 +5849,7 @@ msgid "Start voice input"
 msgstr "Start voice input"
 
 #: src/settings/general/meeting-settings.tsx
+#: src/sidebar/settings-nav-groups.ts
 msgid "Start when meeting begins"
 msgstr "Start when meeting begins"
 
@@ -5850,10 +5898,6 @@ msgstr "Starting your trial..."
 msgid "Starting…"
 msgstr "Starting…"
 
-#: src/settings/general/app-settings.tsx
-msgid "Stay current with updates installed the next time Anarlog opens."
-msgstr "Stay current with updates installed the next time Anarlog opens."
-
 #: src/settings/automations/index.tsx
 msgid "Steps run from top to bottom."
 msgstr "Steps run from top to bottom."
@@ -5876,10 +5920,6 @@ msgstr "Stop auto-add"
 msgid "Stop listening"
 msgstr "Stop listening"
 
-#: src/settings/general/meeting-settings.tsx
-msgid "Stop listening when your call ends."
-msgstr "Stop listening when your call ends."
-
 #: src/chat/components/input/index.tsx
 msgid "Stop response"
 msgstr "Stop response"
@@ -5897,16 +5937,22 @@ msgid "Stop voice input"
 msgstr "Stop voice input"
 
 #: src/settings/general/meeting-settings.tsx
+#: src/sidebar/settings-nav-groups.ts
 msgid "Stop when meeting ends"
 msgstr "Stop when meeting ends"
 
 #: src/settings/general/storage/index.tsx
+#: src/sidebar/settings-nav-groups.ts
 msgid "Storage"
 msgstr "Storage"
 
 #: src/settings/stats/badge-collection.tsx
 msgid "Story Collector"
 msgstr "Story Collector"
+
+#: src/settings/general/camera-watermark.tsx
+msgid "Studio"
+msgstr "Studio"
 
 #: src/instruction/index.tsx
 msgid "Submit callback URL"
@@ -5928,6 +5974,10 @@ msgstr "Suggest what to ask next."
 msgid "Suggested attendees"
 msgstr "Suggested attendees"
 
+#: src/settings/dictionary/replacements.tsx
+msgid "Suggested from your corrections"
+msgstr "Suggested from your corrections"
+
 #: src/session/components/note-input/raw.tsx
 msgid "Suggested templates"
 msgstr "Suggested templates"
@@ -5940,6 +5990,7 @@ msgid "Summary"
 msgstr "Summary"
 
 #: src/settings/general/notification.tsx
+#: src/sidebar/settings-nav-groups.ts
 msgid "Summary complete"
 msgstr "Summary complete"
 
@@ -5964,6 +6015,14 @@ msgstr "Summary ready"
 #: src/settings/general/week-start.tsx
 msgid "Sunday"
 msgstr "Sunday"
+
+#: src/settings/dictionary/replacements.tsx
+msgid "Swap a spoken phrase for the text you want, like \"my email\" for your address. Not applied when editing a selection."
+msgstr "Swap a spoken phrase for the text you want, like \"my email\" for your address. Not applied when editing a selection."
+
+#: src/settings/general/camera-watermark.tsx
+msgid "Switch my camera automatically"
+msgstr "Switch my camera automatically"
 
 #: src/settings/general/billing.tsx
 msgid "Switch to Pro"
@@ -5992,6 +6051,7 @@ msgstr "Sync needs attention"
 
 #: src/imports/screen.tsx
 #: src/settings/sync/index.tsx
+#: src/sidebar/settings-nav-groups.ts
 msgid "Sync now"
 msgstr "Sync now"
 
@@ -6016,20 +6076,18 @@ msgstr "Sync your changes before signing out."
 msgid "Synced"
 msgstr "Synced"
 
-#: src/settings/general/billing.tsx
-msgid "Synced devices"
-msgstr "Synced devices"
-
 #: src/settings/sync/index.tsx
 msgid "Syncing..."
 msgstr "Syncing..."
 
 #: src/settings/appearance/theme.tsx
+#: src/sidebar/settings-nav-groups.ts
 msgid "System"
 msgstr "System"
 
 #: src/onboarding/permissions.tsx
 #: src/settings/general/permissions.tsx
+#: src/sidebar/settings-nav-groups.ts
 msgid "System audio"
 msgstr "System audio"
 
@@ -6038,6 +6096,7 @@ msgid "System audio enabled"
 msgstr "System audio enabled"
 
 #: src/settings/appearance/sidebar-item-fields.tsx
+#: src/sidebar/settings-nav-groups.ts
 msgid "Tags"
 msgstr "Tags"
 
@@ -6078,10 +6137,6 @@ msgstr "teammate@company.com"
 msgid "Teams"
 msgstr "Teams"
 
-#: src/settings/general/meeting-settings.tsx
-msgid "Tell participants when listening starts; this does not confirm consent."
-msgstr "Tell participants when listening starts; this does not confirm consent."
-
 #: src/templates/auto-form.tsx
 #: src/templates/details.tsx
 #: src/templates/template-form.tsx
@@ -6120,6 +6175,10 @@ msgstr "Test runs are not available yet."
 msgid "The link may have expired or its access may have changed."
 msgstr "The link may have expired or its access may have changed."
 
+#: src/services/meeting-capture-stop.tsx
+msgid "The meeting app closed."
+msgstr "The meeting app closed."
+
 #: src/settings/referrals.tsx
 msgid "The new referral offer is not available yet. Your previous referrals are shown below."
 msgstr "The new referral offer is not available yet. Your previous referrals are shown below."
@@ -6132,11 +6191,16 @@ msgstr "The note may have been unshared or moved out of a workspace you can acce
 msgid "The page you're looking for doesn't exist."
 msgstr "The page you're looking for doesn't exist."
 
+#: src/services/meeting-capture-stop.tsx
+msgid "The recording reached the 12-hour limit."
+msgstr "The recording reached the 12-hour limit."
+
 #: src/sidebar/toast/registry.tsx
 msgid "The update download failed"
 msgstr "The update download failed"
 
 #: src/settings/appearance/theme.tsx
+#: src/sidebar/settings-nav-groups.ts
 msgid "Theme"
 msgstr "Theme"
 
@@ -6193,6 +6257,14 @@ msgstr "This note"
 msgid "This note was edited on another device at the same time. The later edit was kept."
 msgstr "This note was edited on another device at the same time. The later edit was kept."
 
+#: src/calendar/components/calendar-selection.tsx
+msgid "This Outlook account needs an active cloud mailbox. Ask your Microsoft 365 administrator to enable Exchange Online, or connect another account."
+msgstr "This Outlook account needs an active cloud mailbox. Ask your Microsoft 365 administrator to enable Exchange Online, or connect another account."
+
+#: src/store/zustand/listener/general-live.ts
+msgid "This recording follows your Mac's default microphone. To select a different microphone, stop and start a new recording."
+msgstr "This recording follows your Mac's default microphone. To select a different microphone, stop and start a new recording."
+
 #: src/chat/components/session-provider.tsx
 msgid "This recording is using batch transcription, so the transcript isn't available to chat yet. Ask again after transcription finishes, or switch to a Pro model for live transcription."
 msgstr "This recording is using batch transcription, so the transcript isn't available to chat yet. Ask again after transcription finishes, or switch to a Pro model for live transcription."
@@ -6205,6 +6277,10 @@ msgstr "This requires Anarlog Enterprise"
 msgid "This requires Anarlog Pro"
 msgstr "This requires Anarlog Pro"
 
+#: src/settings/sync/index.tsx
+msgid "This version can no longer sync. Your notes stay on this device, and changes made here will sync after you update."
+msgstr "This version can no longer sync. Your notes stay on this device, and changes made here will sync after you update."
+
 #. placeholder {0}: status.fileCount
 #. placeholder {1}: formatBytes(status.totalBytes)
 #: src/settings/general/storage/legacy-cleanup.tsx
@@ -6216,6 +6292,7 @@ msgid "Ticket"
 msgstr "Ticket"
 
 #: src/settings/general/timezone.tsx
+#: src/sidebar/settings-nav-groups.ts
 msgid "Timezone"
 msgstr "Timezone"
 
@@ -6234,6 +6311,10 @@ msgstr "Today"
 #: src/sidebar/timeline/utils/index.ts
 msgid "Tomorrow"
 msgstr "Tomorrow"
+
+#: src/dictation/recovery.tsx
+msgid "Transcribe"
+msgstr "Transcribe"
 
 #: src/chat/components/input/index.tsx
 msgid "Transcribing voice input"
@@ -6267,10 +6348,6 @@ msgstr "Transcription provider needed"
 #: src/sidebar/toast/registry.tsx
 msgid "Transcription unavailable"
 msgstr "Transcription unavailable"
-
-#: src/settings/team/index.tsx
-msgid "Transfer primary ownership before changing your role."
-msgstr "Transfer primary ownership before changing your role."
 
 #: src/templates/template-icon-picker.tsx
 msgid "Travel & Places"
@@ -6320,9 +6397,17 @@ msgstr "Turn action items into Linear issues"
 msgid "Turn assigned follow-ups into Linear issue drafts."
 msgstr "Turn assigned follow-ups into Linear issue drafts."
 
+#: src/settings/general/camera-watermark.tsx
+msgid "Turn on Anarlog Camera in System Settings under Privacy & Security, Camera."
+msgstr "Turn on Anarlog Camera in System Settings under Privacy & Security, Camera."
+
 #: src/calendar/components/apple/permission.tsx
 msgid "Turn on Anarlog in System Settings → Privacy & Security → Calendars, then return here."
 msgstr "Turn on Anarlog in System Settings → Privacy & Security → Calendars, then return here."
+
+#: src/settings/dictionary/replacements.tsx
+msgid "Type"
+msgstr "Type"
 
 #: src/settings/appearance/app-icon.tsx
 msgid "Typewriter Key"
@@ -6356,6 +6441,10 @@ msgstr "Unknown"
 #: src/session/components/outer-header/metadata/date.tsx
 msgid "Unknown date"
 msgstr "Unknown date"
+
+#: src/settings/general/camera-watermark.tsx
+msgid "unknown error"
+msgstr "unknown error"
 
 #: src/lock/screen.tsx
 msgid "Unlock"
@@ -6391,6 +6480,10 @@ msgstr "Unnamed device"
 #: src/contacts/contact-page-header.tsx
 msgid "Unpin"
 msgstr "Unpin"
+
+#: src/dictation/recovery.tsx
+msgid "Unsent dictations"
+msgstr "Unsent dictations"
 
 #: src/onboarding/account/after-login.tsx
 msgid "Until {endsOn}"
@@ -6438,6 +6531,10 @@ msgstr "Upcoming Event"
 #: src/resource-sharing/share-dialog.tsx
 msgid "Update"
 msgstr "Update"
+
+#: src/settings/sync/index.tsx
+msgid "Update Anarlog to keep syncing"
+msgstr "Update Anarlog to keep syncing"
 
 #: src/automations/starters.tsx
 msgid "Update project notes in Notion"
@@ -6515,6 +6612,7 @@ msgid "Usage"
 msgstr "Usage"
 
 #: src/settings/appearance/time-format.tsx
+#: src/sidebar/settings-nav-groups.ts
 msgid "Use 24-hour time"
 msgstr "Use 24-hour time"
 
@@ -6539,10 +6637,12 @@ msgid "Use files"
 msgstr "Use files"
 
 #: src/settings/general/index.tsx
+#: src/sidebar/settings-nav-groups.ts
 msgid "Use main language for summaries"
 msgstr "Use main language for summaries"
 
 #: src/settings/sync/index.tsx
+#: src/sidebar/settings-nav-groups.ts
 msgid "Use recovery key instead"
 msgstr "Use recovery key instead"
 
@@ -6570,6 +6670,10 @@ msgstr "Use this domain for links shared from this workspace."
 msgid "Use Touch ID or enter your password to view."
 msgstr "Use Touch ID or enter your password to view."
 
+#: src/settings/dictation-engine.tsx
+msgid "Use what's on screen"
+msgstr "Use what's on screen"
+
 #: src/lock/screen.tsx
 msgid "Use Windows Hello face, PIN, or password to view."
 msgstr "Use Windows Hello face, PIN, or password to view."
@@ -6581,10 +6685,6 @@ msgstr "Use work email"
 #: src/onboarding/permissions.tsx
 msgid "Use your microphone to capture your voice"
 msgstr "Use your microphone to capture your voice"
-
-#: src/settings/general/spoken-languages.tsx
-msgid "Used for transcription and automatic summary language detection."
-msgstr "Used for transcription and automatic summary language detection."
 
 #: src/settings/team/index.tsx
 msgid "Verify domain"
@@ -6628,10 +6728,6 @@ msgstr "View sync log"
 msgid "Voice input is unavailable while Anarlog is recording a meeting."
 msgstr "Voice input is unavailable while Anarlog is recording a meeting."
 
-#: src/settings/general/notification.tsx
-msgid "Wait before treating microphone activity as a meeting."
-msgstr "Wait before treating microphone activity as a meeting."
-
 #: src/automations/starters.tsx
 msgid "Wait until the meeting recording ends."
 msgstr "Wait until the meeting recording ends."
@@ -6657,10 +6753,12 @@ msgid "We couldn't load your invites. Please try again."
 msgstr "We couldn't load your invites. Please try again."
 
 #: src/settings/developers/webhooks.tsx
+#: src/sidebar/settings-nav-groups.ts
 msgid "Webhooks"
 msgstr "Webhooks"
 
 #: src/settings/general/week-start.tsx
+#: src/sidebar/settings-nav-groups.ts
 msgid "Week starts on"
 msgstr "Week starts on"
 
@@ -6701,9 +6799,13 @@ msgstr "What were the key decisions that have been made?"
 msgid "What's new in {version}?"
 msgstr "What's new in {version}?"
 
-#: src/settings/general/index.tsx
-msgid "When off, summaries follow the detected meeting language."
-msgstr "When off, summaries follow the detected meeting language."
+#: src/settings/general/camera-watermark.tsx
+msgid "When Anarlog records a call in {switchApps}, switch its camera to Anarlog Camera."
+msgstr "When Anarlog records a call in {switchApps}, switch its camera to Anarlog Camera."
+
+#: src/settings/dictionary/replacements.tsx
+msgid "When I say"
+msgstr "When I say"
 
 #: src/billing/trial-payment-reminder-dialog.tsx
 msgid "When they start their free trial, yours gets one more month. Up to 3 friends."
@@ -6716,6 +6818,10 @@ msgstr "When this happens"
 #: src/settings/ai/stt/local-file-model.tsx
 msgid "whisper.cpp models"
 msgstr "whisper.cpp models"
+
+#: src/settings/dictionary/replacements.tsx
+msgid "Words you fixed after dictating. Add them so dictation spells them right next time."
+msgstr "Words you fixed after dictating. Add them so dictation spells them right next time."
 
 #: src/task/tab-content.tsx
 msgid "Work on this task"
@@ -6778,6 +6884,10 @@ msgstr "You can use up to three example summaries."
 msgid "You have an active plan"
 msgstr "You have an active plan"
 
+#: src/services/meeting-capture-stop.tsx
+msgid "You signed out or changed accounts."
+msgstr "You signed out or changed accounts."
+
 #: src/settings/team/index.tsx
 msgid "You will become the Primary owner of {workspaceName}, with control over its members, billing, and deletion. The current Primary owner will remain an Owner."
 msgstr "You will become the Primary owner of {workspaceName}, with control over its members, billing, and deletion. The current Primary owner will remain an Owner."
@@ -6836,6 +6946,7 @@ msgid "Your Google account changed. Choose a folder again."
 msgstr "Your Google account changed. Choose a folder again."
 
 #: src/settings/general/account-profile.tsx
+#: src/sidebar/settings-nav-groups.ts
 msgid "Your info"
 msgstr "Your info"
 
@@ -6872,6 +6983,7 @@ msgid "Your personal notes and recordings stay on this device. Sync will connect
 msgstr "Your personal notes and recordings stay on this device. Sync will connect them to this account and bring in its existing notes. Copies already in your previous account remain there. Team and shared notes stay with their workspace. Reconnect integrations for this account. After connecting, this library requires an app version that supports account switching."
 
 #: src/settings/general/billing.tsx
+#: src/sidebar/settings-nav-groups.ts
 msgid "Your plan"
 msgstr "Your plan"
 

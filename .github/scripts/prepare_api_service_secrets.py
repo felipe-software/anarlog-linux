@@ -56,19 +56,18 @@ CORE = BILLING | {
 SYNC = {
     "RESEND_API_KEY",
     "RESEND_FROM_EMAIL",
-    "ANARLOG_CLOUDSYNC_DATABASE_ID",
-    "ANARLOG_CLOUDSYNC_E2EE_DATABASE_ID",
-    "ANARLOG_CLOUDSYNC_PROTOCOL_MODE",
-    "ANARLOG_CLOUDSYNC_TOKEN_TTL_SECONDS",
-    "ANARLOG_CLOUDSYNC_DESKTOP_TRANSPORT",
-    "SQLITECLOUD_CLOUDSYNC_MANAGEMENT_API_KEY",
-    "SQLITECLOUD_PROJECT_URL",
-    "SQLITECLOUD_TOKEN_ISSUER_API_KEY",
 }
 ROLES = {"ai": AI, "sync": SYNC, "core": CORE | SYNC, "billing": BILLING}
 
 
-def select(service, api_secrets, cloudsync_secrets, webhook_secrets=()):
+def select(
+    service,
+    api_secrets,
+    cloudsync_secrets=(),
+    webhook_secrets=(),
+    *,
+    rollback_image=False,
+):
     if service not in {*ROLES, "all", "gateway", "legacy"}:
         raise ValueError("Unknown API service")
     allowed = SHARED | ROLES.get(service, AI | CORE | SYNC)
@@ -103,7 +102,11 @@ def select(service, api_secrets, cloudsync_secrets, webhook_secrets=()):
     if service in {"core", "all", "gateway", "legacy"}:
         required |= {"NANGO_API_KEY", "NANGO_WEBHOOK_SIGNING_KEY"}
     if service in {"sync", "core", "all", "gateway", "legacy"}:
-        required |= SYNC - {"ANARLOG_CLOUDSYNC_DESKTOP_TRANSPORT"}
+        required |= {"RESEND_API_KEY", "RESEND_FROM_EMAIL"}
+        if rollback_image:
+            # Verified pre-#8274 images still require an explicit retired mode to start cleanup
+            # without SQLite Cloud provider credentials.
+            values["ANARLOG_SQLITECLOUD_MODE"] = "retired"
     if service == "billing":
         webhook_values = {
             secret["key"]: secret.get("value", "") for secret in webhook_secrets
@@ -129,15 +132,17 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--service", required=True)
     parser.add_argument("--api", required=True)
-    parser.add_argument("--cloudsync", required=True)
+    parser.add_argument("--cloudsync")
     parser.add_argument("--output", required=True)
     parser.add_argument("--webhooks")
+    parser.add_argument("--rollback-image", action="store_true")
     args = parser.parse_args()
     values = select(
         args.service,
         json.loads(Path(args.api).read_text()),
-        json.loads(Path(args.cloudsync).read_text()),
+        json.loads(Path(args.cloudsync).read_text()) if args.cloudsync else [],
         json.loads(Path(args.webhooks).read_text()) if args.webhooks else [],
+        rollback_image=args.rollback_image,
     )
     path = Path(args.output)
     path.touch(mode=0o600)
