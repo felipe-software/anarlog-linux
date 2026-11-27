@@ -10,6 +10,7 @@ use anlg_desktop_identity::paths::{
 const SLOW_STARTUP_INDICATOR_DELAY: std::time::Duration = std::time::Duration::from_secs(3);
 const CRASH_REPORTER_SERVER_ARG: &str = "--crash-reporter-server";
 const WEBKIT_DISABLE_DMABUF_RENDERER: &str = "WEBKIT_DISABLE_DMABUF_RENDERER";
+const GDK_CORE_DEVICE_EVENTS: &str = "GDK_CORE_DEVICE_EVENTS";
 
 // WebKitGTK's DMA-BUF renderer leaves a blank window on NVIDIA/Wayland and
 // some other GPU/compositor combinations. Set the fallback before Tokio or
@@ -17,6 +18,11 @@ const WEBKIT_DISABLE_DMABUF_RENDERER: &str = "WEBKIT_DISABLE_DMABUF_RENDERER";
 pub(crate) fn apply_linux_webkit_workarounds() {
     if !cfg!(target_os = "linux") {
         return;
+    }
+
+    // SAFETY: called from the process entrypoint before other threads start.
+    unsafe {
+        std::env::remove_var(GDK_CORE_DEVICE_EVENTS);
     }
 
     if let Some(value) =
